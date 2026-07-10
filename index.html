@@ -187,8 +187,8 @@
     </div>
 
     <div class="card">
-      <h2>Änderungen — wer hat was gemacht</h2>
-      <div id="logbox" class="loglist"></div>
+      <h2 id="logtoggle" style="cursor:pointer;user-select:none">Änderungen — wer hat was gemacht <span id="logarrow" style="font-size:12px;font-weight:600;color:#8a939b">▸ aufklappen</span></h2>
+      <div id="logbox" class="loglist" style="display:none"></div>
     </div>
 
     <div class="card">
@@ -268,6 +268,8 @@ async function startApp(){
   document.getElementById('app').style.display = 'block';
   const el = document.getElementById('whoami'); if (el) el.textContent = 'Du: ' + myName;
   state.active = localStorage.getItem('regieplan_day') || 'samstag';
+  document.getElementById('logtoggle').onclick = () => setLogCollapsed(document.getElementById('logbox').style.display !== 'none');
+  setLogCollapsed(localStorage.getItem('regieplan_logcollapsed') !== '0');
   await initData();
   subscribeRealtime();
   renderAll();
@@ -573,6 +575,12 @@ function renderLog(){
     row.innerHTML = '<span class="when">'+when+'</span><span class="who">'+esc(e.who||'?')+'</span><span class="what">'+esc(e.detail||'')+'</span>';
     box.appendChild(row);
   }
+}
+function setLogCollapsed(collapsed){
+  const box = document.getElementById('logbox'), ar = document.getElementById('logarrow');
+  if (box) box.style.display = collapsed ? 'none' : 'block';
+  if (ar) ar.textContent = collapsed ? '▸ aufklappen' : '▾ zuklappen';
+  localStorage.setItem('regieplan_logcollapsed', collapsed ? '1' : '0');
 }
 function applyReadonly(){
   const banner = document.getElementById('robanner');

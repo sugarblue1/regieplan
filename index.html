@@ -59,6 +59,12 @@
   .timeedit:focus { border-color:#007E89; background:#fff; outline:none; }
   .timeedit.locked { background:#e3f3f4; border-color:#bfe3e6; }
   .timesub { font-size:11px; color:#9aa3ab; margin:2px 0 0 5px; }
+  select.type { width: 150px; }
+  .stage { display:flex; flex-direction:column; gap:5px; }
+  .stage input.people { width:66px; padding:6px 8px; border:1px solid #d6cfc2; border-radius:6px; font-size:13px; text-align:center; background:#faf9f6; }
+  .iconrow { display:flex; gap:4px; flex-wrap:wrap; }
+  .iconbtn { width:28px; height:28px; display:flex; align-items:center; justify-content:center; border:1px solid #ded8cc; background:#f7f5f0; border-radius:6px; cursor:pointer; color:#b3bac1; padding:0; }
+  .iconbtn.on { color:#23303a; background:#e6e2d9; border-color:#c7c0b2; }
 
   select.type, input.name, textarea.name, textarea.video, input.min { padding: 7px 8px; border: 1px solid #d6cfc2; border-radius: 7px; font-size: 14px; background: #faf9f6; width: 100%; }
   input.min { width: 62px; text-align: center; }
@@ -165,7 +171,7 @@
     <div class="card">
       <h2>Programm</h2>
       <table class="plan">
-        <thead><tr><th class="hcol"></th><th class="hcol"></th><th>Uhrzeit</th><th>Art</th><th>Programmpunkt</th><th>Minuten</th><th>Video</th><th></th></tr></thead>
+        <thead><tr><th class="hcol"></th><th class="hcol"></th><th>Uhrzeit</th><th>Art</th><th>Bühne</th><th>Programmpunkt</th><th>Minuten</th><th>Video</th><th></th></tr></thead>
         <tbody id="rows"></tbody>
       </table>
       <div class="addbar" id="addbar">
@@ -224,6 +230,12 @@ const TYPES = {
   umbaumod:    { label: 'Umbau / Moderation', color: '#D32F2F', tint: '#F3A39B' },
   spende:      { label: 'Spenden Aktion',     color: '#E8952A', tint: '#FBE1BF' },
   videoton:    { label: 'Videoclip mit Ton',  color: '#3949AB', tint: '#CDD3F0' }
+};
+const ICONS = {
+  einhorn: { label: 'Einhorn', svg: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 20c-.5-4 1.6-7.6 5-8.6"/><path d="M9.5 11.4c1-.7 2.2-1 3.5-1 3 0 4.6 2.6 4.6 5.6"/><path d="M12.8 10.6l1.4-5.4 2.4 3.3-1.4 2.1"/><path d="M9.8 9.2l.9-2.6"/></svg>' },
+  band: { label: 'Band', svg: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="18" r="2.6"/><circle cx="17" cy="16" r="2.6"/><path d="M8.6 18V5.5L19.6 3.6V16"/><path d="M8.6 9.2l11-1.9"/></svg>' },
+  blaster: { label: 'Gettoblaster', svg: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="7.5" width="19" height="12" rx="1.8"/><path d="M6.5 7.5V5.6a1.8 1.8 0 0 1 1.8-1.8h7.4a1.8 1.8 0 0 1 1.8 1.8v1.9"/><circle cx="8" cy="13.5" r="2.4"/><circle cx="16" cy="13.5" r="2.4"/></svg>' },
+  micro: { label: 'Mikro', svg: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5.5 10.5a6.5 6.5 0 0 0 13 0"/><line x1="12" y1="17" x2="12" y2="21.5"/><line x1="8.5" y1="21.5" x2="15.5" y2="21.5"/></svg>' }
 };
 
 /* ====== Startwerte, falls die Datenbank noch leer ist (ohne Programm, das liegt geschützt in der Datenbank) ====== */
@@ -480,6 +492,18 @@ function renderRows(){
     sel.style.background = ty.tint; sel.style.fontWeight = '600';
     for (const k in TYPES){ const o=document.createElement('option'); o.value=k; o.textContent=TYPES[k].label; if(k===it.type)o.selected=true; sel.appendChild(o); }
     sel.onchange = () => { it.type = sel.value; save(); renderRows(); }; tdType.appendChild(sel); tr.appendChild(tdType);
+    const tdS = document.createElement('td'); const stage = document.createElement('div'); stage.className='stage';
+    const ppl = document.createElement('input'); ppl.className='people'; ppl.type='number'; ppl.min='0'; ppl.placeholder='Pers.'; ppl.value = (it.people!=null ? it.people : '');
+    ppl.oninput = () => { it.people = (ppl.value===''? null : (Number(ppl.value)||0)); save(); };
+    stage.appendChild(ppl);
+    const iconRow = document.createElement('div'); iconRow.className='iconrow';
+    for (const key in ICONS){
+      const ib = document.createElement('button'); const on = Array.isArray(it.icons) && it.icons.includes(key);
+      ib.className = 'iconbtn' + (on ? ' on' : ''); ib.type='button'; ib.innerHTML = ICONS[key].svg; ib.title = ICONS[key].label;
+      ib.onclick = () => { if (!Array.isArray(it.icons)) it.icons = []; const ix = it.icons.indexOf(key); if (ix>=0) it.icons.splice(ix,1); else it.icons.push(key); save(); renderRows(); };
+      iconRow.appendChild(ib);
+    }
+    stage.appendChild(iconRow); tdS.appendChild(stage); tr.appendChild(tdS);
     const tdN = document.createElement('td'); const inN = document.createElement('textarea'); inN.className='name'; inN.rows=1; inN.value=it.name||''; inN.placeholder='Name / Beschreibung';
     inN.style.background = ty.tint;
     const grow = () => { inN.style.height='auto'; inN.style.height=(inN.scrollHeight+2)+'px'; };
@@ -533,8 +557,8 @@ document.getElementById('earliest').onchange = e => { const v = parseTimeInput(e
 /* ====== Export ====== */
 function planTable(){
   const c = computed(); const e = ev();
-  const head = ['Uhrzeit','Bis','Art','Programmpunkt','Minuten','Video'];
-  const lines = c.rows.map(r => [ fmt(r.startM), fmt(r.endM), (TYPES[r.it.type]||TYPES.kuenstler).label, r.it.name||'', String(r.it.min), r.it.video||'' ]);
+  const head = ['Uhrzeit','Bis','Art','Bühne','Programmpunkt','Minuten','Video'];
+  const lines = c.rows.map(r => { const st = ((r.it.people!=null?r.it.people+' Pers':'') + (Array.isArray(r.it.icons)&&r.it.icons.length?' '+r.it.icons.map(k=>(ICONS[k]?ICONS[k].label:k)).join('/'):'')).trim(); return [ fmt(r.startM), fmt(r.endM), (TYPES[r.it.type]||TYPES.kuenstler).label, st, r.it.name||'', String(r.it.min), r.it.video||'' ]; });
   return { head, lines, title: e.title, start: fmt(c.firstStart), end: fmt(c.lastEnd) };
 }
 function copyForSheets(){
@@ -556,8 +580,8 @@ function downloadCsv(){
 function printPlan(){
   const p = planTable(); const area = document.getElementById('printarea');
   let html = '<h1>'+(p.title||'Regieplan')+'</h1><div class="meta">Beginn '+p.start+' Uhr, Ende '+p.end+' Uhr</div>';
-  html += '<table><thead><tr><th>Uhrzeit</th><th>Bis</th><th>Art</th><th>Programmpunkt</th><th>Min</th><th>Video</th></tr></thead><tbody>';
-  for (const l of p.lines) html += '<tr><td class="t">'+l[0]+'</td><td>'+l[1]+'</td><td>'+l[2]+'</td><td>'+l[3]+'</td><td>'+l[4]+'</td><td>'+l[5]+'</td></tr>';
+  html += '<table><thead><tr>' + p.head.map(h => '<th>'+esc(h)+'</th>').join('') + '</tr></thead><tbody>';
+  for (const l of p.lines) html += '<tr>' + l.map((c,i) => '<td'+(i===0?' class="t"':'')+'>'+esc(c)+'</td>').join('') + '</tr>';
   html += '</tbody></table>'; area.innerHTML = html; window.print();
 }
 
@@ -588,6 +612,7 @@ function applyReadonly(){
   if (banner) banner.style.display = 'block';
   document.querySelectorAll('#app input, #app textarea, #app select').forEach(el => { el.disabled = true; });
   document.querySelectorAll('#app .lockbtn').forEach(b => { b.disabled = true; });
+  document.querySelectorAll('#app .iconbtn').forEach(b => { b.disabled = true; });
   document.querySelectorAll('#addbar, .rowbtns, #presets button').forEach(el => { el.style.display = 'none'; });
   document.querySelectorAll('#rows tr').forEach(tr => { tr.draggable = false; });
   ['logcard','presetcard'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });

@@ -48,9 +48,10 @@
   .timecell { font-weight: 700; font-size: 16px; white-space: nowrap; color: #0d7d8a; }
   .timecell small { display:block; font-weight:500; font-size:11px; color:#9aa3ab; }
 
-  select.type, input.name, input.min { padding: 7px 8px; border: 1px solid #d6cfc2; border-radius: 7px; font-size: 14px; background: #faf9f6; width: 100%; }
+  select.type, input.name, textarea.name, input.min { padding: 7px 8px; border: 1px solid #d6cfc2; border-radius: 7px; font-size: 14px; background: #faf9f6; width: 100%; }
   input.min { width: 62px; text-align: center; }
-  .name { width: 100%; }
+  .name { width: 100%; min-width: 280px; }
+  textarea.name { resize: vertical; line-height: 1.4; min-height: 36px; font-family: inherit; overflow: hidden; }
 
   .badge { width: 11px; height: 34px; border-radius: 4px; display: inline-block; }
   table.plan tbody tr:nth-child(even) { background: #f3f2ef; }
@@ -351,19 +352,20 @@ function renderRows(){
     sel.style.background = ty.tint; sel.style.fontWeight = '600';
     for (const k in TYPES){ const o=document.createElement('option'); o.value=k; o.textContent=TYPES[k].label; if(k===it.type)o.selected=true; sel.appendChild(o); }
     sel.onchange = () => { it.type = sel.value; save(); renderRows(); }; tdType.appendChild(sel); tr.appendChild(tdType);
-    const tdN = document.createElement('td'); const inN = document.createElement('input'); inN.className='name'; inN.type='text'; inN.value=it.name||''; inN.placeholder='Name / Beschreibung';
-    inN.oninput = () => { it.name = inN.value; save(); }; tdN.appendChild(inN); tr.appendChild(tdN);
+    const tdN = document.createElement('td'); const inN = document.createElement('textarea'); inN.className='name'; inN.rows=1; inN.value=it.name||''; inN.placeholder='Name / Beschreibung';
+    const grow = () => { inN.style.height='auto'; inN.style.height=(inN.scrollHeight+2)+'px'; };
+    inN.oninput = () => { it.name = inN.value; grow(); save(); }; tdN.appendChild(inN); tr.appendChild(tdN);
     const tdM = document.createElement('td'); const inM = document.createElement('input'); inM.className='min'; inM.type='number'; inM.min='0'; inM.value=it.min;
     inM.oninput = () => { it.min = Number(inM.value)||0; save(); renderRows(); renderStatus(); renderTot(); }; tdM.appendChild(inM); tr.appendChild(tdM);
     const tdBt = document.createElement('td'); const wrap = document.createElement('div'); wrap.className='rowbtns';
-    const up = btn('↑', () => move(idx,-1)); const dn = btn('↓', () => move(idx,1));
     const del = btn('✕', () => { ev().items.splice(idx,1); save(); renderRows(); renderStatus(); renderTot(); }); del.className='del';
-    wrap.append(up,dn,del); tdBt.appendChild(wrap); tr.appendChild(tdBt);
+    wrap.append(del); tdBt.appendChild(wrap); tr.appendChild(tdBt);
     tr.addEventListener('dragstart', () => { dragFrom = idx; tr.classList.add('dragging'); });
     tr.addEventListener('dragend', () => tr.classList.remove('dragging'));
     tr.addEventListener('dragover', e => e.preventDefault());
     tr.addEventListener('drop', e => { e.preventDefault(); dropOn(idx); });
     tb.appendChild(tr);
+    grow();
   });
 }
 function btn(txt, fn){ const b=document.createElement('button'); b.textContent=txt; b.onclick=fn; return b; }

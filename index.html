@@ -82,6 +82,12 @@
   .totbar { font-size: 14px; color: #5b6670; margin-top: 10px; }
   .totbar b { color: #23303a; }
   .hint { font-size: 12px; color: #8a939b; margin-top: 4px; }
+  .loglist { font-size: 13px; }
+  .logrow { padding: 7px 2px; border-bottom: 1px solid #f0eee8; display: flex; gap: 12px; }
+  .logrow .when { color:#8a939b; white-space:nowrap; min-width:96px; }
+  .logrow .who { font-weight:700; color:#0d7d8a; white-space:nowrap; min-width:80px; }
+  .logrow .what { color:#23303a; }
+  .logempty { color:#8a939b; }
 
   /* Login */
   #gate { position: fixed; inset: 0; background: #23303a; display: flex; align-items: center; justify-content: center; z-index: 50; }
@@ -112,7 +118,8 @@
 <div id="gate">
   <div class="box">
     <h2>Regieplan</h2>
-    <p>Bitte Passwort eingeben</p>
+    <p>Dein Name und das Passwort</p>
+    <input type="text" id="who" placeholder="Dein Name" autocomplete="name">
     <input type="password" id="pw" placeholder="Passwort" autocomplete="current-password">
     <button onclick="doLogin()">Rein</button>
     <div class="err" id="loginErr"></div>
@@ -122,6 +129,7 @@
 <div id="app">
   <header class="top">
     <span class="logout" onclick="doLogout()">Abmelden</span>
+    <span class="logout" id="whoami" onclick="changeName()" style="margin-right:16px"></span>
     <h1>Regieplan</h1>
     <p>Gemeinsamer Plan. Was du änderst, sehen alle anderen sofort. Die Zeiten rechnen sich vom Ende her nach vorne.</p>
     <div class="live" id="live">verbunden</div>
@@ -129,6 +137,7 @@
 
   <div class="wrap">
     <div class="tabs" id="tabs"></div>
+    <div id="robanner" style="display:none;background:#fff3d6;color:#8a5a00;padding:11px 14px;border-radius:10px;margin-bottom:14px;font-weight:600">Nur Ansicht. Du kannst alles sehen, aber nichts ändern.</div>
 
     <div class="card">
       <div class="settings">
@@ -152,6 +161,7 @@
         <button style="background:#8E6FD0" onclick="addItem('sosa')">+ SOSA</button>
         <button style="background:#3FB873" onclick="addItem('redebeitrag')">+ Redebeitrag</button>
         <button style="background:#3FA9DC" onclick="addItem('moderation')">+ Moderation</button>
+        <button style="background:#C62828" onclick="addItem('umbaumod')">+ Umbau / Moderation</button>
         <button style="background:#E23B2E" onclick="addItem('pause')">+ Umbau / Pause</button>
       </div>
       <div class="totbar" id="totbar"></div>
@@ -161,6 +171,11 @@
       <h2>Moderations Vorlagen</h2>
       <div class="hint" style="margin-bottom:10px">Klick auf einfügen setzt eine Moderation mit dieser Länge ins Programm. Namen und Minuten kannst du frei ändern oder neue anlegen.</div>
       <div class="presets" id="presets"></div>
+    </div>
+
+    <div class="card">
+      <h2>Änderungen — wer hat was gemacht</h2>
+      <div id="logbox" class="loglist"></div>
     </div>
 
     <div class="card">
@@ -182,15 +197,19 @@
 const SUPA_URL = 'https://cmzcevgxmxmlrrwoqjfr.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNtemNldmd4bXhtbHJyd29xamZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM2OTE4NjksImV4cCI6MjA5OTI2Nzg2OX0.0t0WXc14MNpLsGal9Gy98BSmW_Spig5Cu3O-OoRtuRQ';
 const SHARED_EMAIL = 'team@csd-berlin.de';
+const VIEWER_EMAIL = 'gast@csd-berlin.de';
+let canEdit = true;
 const supa = window.supabase.createClient(SUPA_URL, SUPA_KEY);
 const myClient = 'c' + Math.random().toString(36).slice(2);
+let myName = localStorage.getItem('regieplan_name') || '';
 
 const TYPES = {
   kuenstler:   { label: 'Artist',        color: '#E84B8A', tint: '#FAD0E2' },
   sosa:        { label: 'SOSA',          color: '#8E6FD0', tint: '#E2D8F5' },
   redebeitrag: { label: 'Redebeitrag',   color: '#3FB873', tint: '#CDEDD8' },
-  moderation:  { label: 'Moderation',    color: '#3FA9DC', tint: '#CDE9F7' },
-  pause:       { label: 'Umbau / Pause', color: '#E23B2E', tint: '#F7CFCB' }
+  moderation:  { label: 'Moderation',         color: '#3FA9DC', tint: '#CDE9F7' },
+  umbaumod:    { label: 'Umbau / Moderation', color: '#C62828', tint: '#F1C7C2' },
+  pause:       { label: 'Umbau / Pause',      color: '#E23B2E', tint: '#F7CFCB' }
 };
 
 /* ====== Startwerte, falls die Datenbank noch leer ist (ohne Programm, das liegt geschützt in der Datenbank) ====== */
@@ -202,27 +221,38 @@ const DEFAULT = {
   }
 };
 
-let state = { active:'samstag', presets: DEFAULT.presets, events: DEFAULT.events };
+let state = { active:'samstag', presets: DEFAULT.presets, events: DEFAULT.events, log: [] };
 let counter = 1;
 
 /* ====== Login ====== */
 async function boot(){
   const { data } = await supa.auth.getSession();
-  if (data && data.session) startApp();
+  if (data && data.session && myName){ canEdit = (data.session.user.email === SHARED_EMAIL); startApp(); }
 }
 async function doLogin(){
+  const who = document.getElementById('who').value.trim();
   const pw = document.getElementById('pw').value;
   document.getElementById('loginErr').textContent = '';
-  const { error } = await supa.auth.signInWithPassword({ email: SHARED_EMAIL, password: pw });
-  if (error) { document.getElementById('loginErr').textContent = 'Passwort stimmt nicht.'; return; }
+  if (!who){ document.getElementById('loginErr').textContent = 'Bitte deinen Namen eingeben.'; return; }
+  let sess = (await supa.auth.getSession()).data.session;
+  if (!sess){
+    let r = await supa.auth.signInWithPassword({ email: SHARED_EMAIL, password: pw });
+    if (r.error){ r = await supa.auth.signInWithPassword({ email: VIEWER_EMAIL, password: pw }); }
+    if (r.error){ document.getElementById('loginErr').textContent = 'Passwort stimmt nicht.'; return; }
+    sess = r.data.session;
+  }
+  canEdit = (sess.user.email === SHARED_EMAIL);
+  myName = who; localStorage.setItem('regieplan_name', who);
   startApp();
 }
+function changeName(){ const n = prompt('Dein Name:', myName); if (n && n.trim()){ myName = n.trim(); localStorage.setItem('regieplan_name', myName); const el = document.getElementById('whoami'); if (el) el.textContent = 'Du: ' + myName; } }
 async function doLogout(){ await supa.auth.signOut(); location.reload(); }
 document.getElementById('pw').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 
 async function startApp(){
   document.getElementById('gate').style.display = 'none';
   document.getElementById('app').style.display = 'block';
+  const el = document.getElementById('whoami'); if (el) el.textContent = 'Du: ' + myName;
   await initData();
   subscribeRealtime();
   renderAll();
@@ -239,21 +269,60 @@ async function initData(){
     ({ data } = await supa.from('regieplan_state').select('*').eq('id',1).maybeSingle());
   }
   if (data && data.data) applyData(data.data);
+  setSnap();
 }
 function applyData(d){
   if (d.presets) state.presets = d.presets;
   if (d.events)  state.events  = d.events;
+  state.log = d.log || [];
+}
+let snap = null;
+function setSnap(){ snap = JSON.parse(JSON.stringify({ presets: state.presets, events: state.events })); }
+function diffStates(o, n){
+  const out = [];
+  for (const day of ['freitag','samstag']){
+    const label = day === 'freitag' ? 'Freitag' : 'Samstag';
+    const oe = o.events[day], ne = n.events[day];
+    if (!oe || !ne) continue;
+    if (oe.endTime !== ne.endTime) out.push(label + ': Ende auf ' + ne.endTime);
+    if (oe.earliest !== ne.earliest) out.push(label + ': frühester Beginn auf ' + ne.earliest);
+    if ((oe.title||'') !== (ne.title||'')) out.push(label + ': Titel geändert');
+    const oIds = oe.items.map(x=>x.id), nIds = ne.items.map(x=>x.id);
+    for (const it of ne.items) if (!oIds.includes(it.id)) out.push(label + ': neuer Punkt „' + (it.name||'ohne Name') + '“');
+    for (const it of oe.items) if (!nIds.includes(it.id)) out.push(label + ': „' + (it.name||'ohne Name') + '“ gelöscht');
+    for (const it of ne.items){
+      const old = oe.items.find(x=>x.id===it.id); if (!old) continue;
+      const nm = it.name || old.name || 'Punkt';
+      if (old.min !== it.min) out.push(label + ': „' + nm + '“ ' + old.min + '→' + it.min + ' Min');
+      else if ((old.name||'') !== (it.name||'')) out.push(label + ': Name → „' + (it.name||'') + '“');
+      if (old.type !== it.type) out.push(label + ': „' + nm + '“ Art geändert');
+      if ((old.video||'') !== (it.video||'')) out.push(label + ': „' + nm + '“ Video geändert');
+    }
+    const common = nIds.filter(id=>oIds.includes(id));
+    const oOrder = oIds.filter(id=>common.includes(id)).join(',');
+    const nOrder = nIds.filter(id=>common.includes(id)).join(',');
+    if (oOrder !== nOrder) out.push(label + ': Reihenfolge geändert');
+  }
+  return out;
 }
 
 let saveTimer = null;
 function save(){
+  if (!canEdit) return;
   clearTimeout(saveTimer);
   saveTimer = setTimeout(pushToDb, 350);
 }
 async function pushToDb(){
+  const cur = { presets: state.presets, events: state.events };
+  const changes = snap ? diffStates(snap, cur) : [];
+  if (changes.length){
+    state.log = [{ who: myName || 'Jemand', at: new Date().toISOString(), detail: changes.join(' · ') }, ...(state.log || [])].slice(0, 60);
+    renderLog();
+  }
+  setSnap();
   await supa.from('regieplan_state').upsert({
     id: 1,
-    data: { presets: state.presets, events: state.events },
+    data: { presets: state.presets, events: state.events, log: state.log },
     client: myClient,
     updated_at: new Date().toISOString()
   });
@@ -278,11 +347,11 @@ function isEditing(){
 }
 function handleRemote(d){
   if (isEditing()){ pendingRemote = d; document.getElementById('remotehint').style.display = 'block'; return; }
-  applyData(d); renderAll();
+  applyData(d); setSnap(); renderAll();
 }
 document.addEventListener('focusout', () => setTimeout(() => {
   if (pendingRemote && !isEditing()){
-    applyData(pendingRemote); pendingRemote = null;
+    applyData(pendingRemote); pendingRemote = null; setSnap();
     document.getElementById('remotehint').style.display = 'none';
     renderAll();
   }
@@ -437,7 +506,29 @@ function printPlan(){
 }
 
 /* ====== Start ====== */
-function renderAll(){ renderTabs(); renderSettings(); renderRows(); renderStatus(); renderTot(); renderPresets(); document.getElementById('copyhint').textContent=''; }
+function esc(s){ return String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function renderLog(){
+  const box = document.getElementById('logbox'); if (!box) return;
+  const log = state.log || [];
+  if (!log.length){ box.innerHTML = '<div class="logempty">Noch keine Änderungen aufgezeichnet.</div>'; return; }
+  box.innerHTML = '';
+  for (const e of log.slice(0,40)){
+    const d = new Date(e.at);
+    const when = isNaN(d.getTime()) ? '' : d.toLocaleString('de-DE',{ day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+    const row = document.createElement('div'); row.className = 'logrow';
+    row.innerHTML = '<span class="when">'+when+'</span><span class="who">'+esc(e.who||'?')+'</span><span class="what">'+esc(e.detail||'')+'</span>';
+    box.appendChild(row);
+  }
+}
+function applyReadonly(){
+  const banner = document.getElementById('robanner');
+  if (canEdit){ if (banner) banner.style.display = 'none'; return; }
+  if (banner) banner.style.display = 'block';
+  document.querySelectorAll('#app input, #app textarea, #app select').forEach(el => { el.disabled = true; });
+  document.querySelectorAll('#addbar, .rowbtns, #presets button').forEach(el => { el.style.display = 'none'; });
+  document.querySelectorAll('#rows tr').forEach(tr => { tr.draggable = false; });
+}
+function renderAll(){ renderTabs(); renderSettings(); renderRows(); renderStatus(); renderTot(); renderPresets(); renderLog(); applyReadonly(); document.getElementById('copyhint').textContent=''; }
 boot();
 </script>
 </body>

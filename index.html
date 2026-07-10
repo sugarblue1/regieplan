@@ -180,13 +180,13 @@
       <div class="totbar" id="totbar"></div>
     </div>
 
-    <div class="card">
+    <div class="card" id="presetcard">
       <h2>Moderations Vorlagen</h2>
       <div class="hint" style="margin-bottom:10px">Klick auf einfügen setzt eine Moderation mit dieser Länge ins Programm. Namen und Minuten kannst du frei ändern oder neue anlegen.</div>
       <div class="presets" id="presets"></div>
     </div>
 
-    <div class="card">
+    <div class="card" id="logcard">
       <h2 id="logtoggle" style="cursor:pointer;user-select:none">Änderungen — wer hat was gemacht <span id="logarrow" style="font-size:12px;font-weight:600;color:#8a939b">▸ aufklappen</span></h2>
       <div id="logbox" class="loglist" style="display:none"></div>
     </div>
@@ -590,6 +590,7 @@ function applyReadonly(){
   document.querySelectorAll('#app .lockbtn').forEach(b => { b.disabled = true; });
   document.querySelectorAll('#addbar, .rowbtns, #presets button').forEach(el => { el.style.display = 'none'; });
   document.querySelectorAll('#rows tr').forEach(tr => { tr.draggable = false; });
+  ['logcard','presetcard'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
 }
 function renderAll(){ renderTabs(); renderSettings(); renderRows(); renderStatus(); renderTot(); renderPresets(); renderLog(); applyReadonly(); document.getElementById('copyhint').textContent=''; }
 boot();

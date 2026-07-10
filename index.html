@@ -52,7 +52,8 @@
   input.min { width: 62px; text-align: center; }
   .name { width: 100%; }
 
-  .badge { width: 8px; height: 34px; border-radius: 4px; display: inline-block; }
+  .badge { width: 11px; height: 34px; border-radius: 4px; display: inline-block; }
+  table.plan tbody tr:nth-child(even) { background: #f3f2ef; }
 
   .rowbtns { display: flex; gap: 4px; }
   .rowbtns button { width: 30px; height: 30px; border: 1px solid #ded8cc; background: #f7f5f0; border-radius: 7px; cursor: pointer; font-size: 15px; color: #5b6670; line-height: 1; }
@@ -145,9 +146,11 @@
         <tbody id="rows"></tbody>
       </table>
       <div class="addbar" id="addbar">
-        <button onclick="addItem('kuenstler')">+ Künstler</button>
-        <button onclick="addItem('redebeitrag')">+ Redebeitrag</button>
-        <button class="ghost" onclick="addItem('pause')">+ Pause / Umbau</button>
+        <button style="background:#E84B8A" onclick="addItem('kuenstler')">+ Artist</button>
+        <button style="background:#8E6FD0" onclick="addItem('sosa')">+ SOSA</button>
+        <button style="background:#3FB873" onclick="addItem('redebeitrag')">+ Redebeitrag</button>
+        <button style="background:#3FA9DC" onclick="addItem('moderation')">+ Moderation</button>
+        <button style="background:#E23B2E" onclick="addItem('pause')">+ Umbau / Pause</button>
       </div>
       <div class="totbar" id="totbar"></div>
     </div>
@@ -181,10 +184,11 @@ const supa = window.supabase.createClient(SUPA_URL, SUPA_KEY);
 const myClient = 'c' + Math.random().toString(36).slice(2);
 
 const TYPES = {
-  kuenstler:   { label: 'Künstler',      color: '#0d7d8a' },
-  moderation:  { label: 'Moderation',    color: '#e8722a' },
-  redebeitrag: { label: 'Redebeitrag',   color: '#7b52c9' },
-  pause:       { label: 'Pause / Umbau', color: '#96a0a8' }
+  kuenstler:   { label: 'Artist',        color: '#E84B8A', tint: '#FAD0E2' },
+  sosa:        { label: 'SOSA',          color: '#8E6FD0', tint: '#E2D8F5' },
+  redebeitrag: { label: 'Redebeitrag',   color: '#3FB873', tint: '#CDEDD8' },
+  moderation:  { label: 'Moderation',    color: '#3FA9DC', tint: '#CDE9F7' },
+  pause:       { label: 'Umbau / Pause', color: '#E23B2E', tint: '#F7CFCB' }
 };
 
 /* ====== Startwerte, falls die Datenbank noch leer ist (ohne Programm, das liegt geschützt in der Datenbank) ====== */
@@ -337,12 +341,14 @@ function renderRows(){
   const c = computed(); const tb = document.getElementById('rows'); tb.innerHTML = '';
   c.rows.forEach((r, idx) => {
     const it = r.it;
+    const ty = TYPES[it.type] || TYPES.kuenstler;
     const tr = document.createElement('tr'); tr.draggable = true; tr.dataset.idx = idx;
     const tdH = document.createElement('td'); tdH.className = 'handle hcol'; tdH.textContent = '⠿'; tr.appendChild(tdH);
     const tdB = document.createElement('td'); tdB.className = 'hcol';
-    const badge = document.createElement('span'); badge.className='badge'; badge.style.background = TYPES[it.type].color; tdB.appendChild(badge); tr.appendChild(tdB);
+    const badge = document.createElement('span'); badge.className='badge'; badge.style.background = ty.color; tdB.appendChild(badge); tr.appendChild(tdB);
     const tdT = document.createElement('td'); tdT.className='timecell'; tdT.innerHTML = fmt(r.startM)+'<small>bis '+fmt(r.endM)+'</small>'; tr.appendChild(tdT);
     const tdType = document.createElement('td'); const sel = document.createElement('select'); sel.className='type';
+    sel.style.background = ty.tint; sel.style.fontWeight = '600';
     for (const k in TYPES){ const o=document.createElement('option'); o.value=k; o.textContent=TYPES[k].label; if(k===it.type)o.selected=true; sel.appendChild(o); }
     sel.onchange = () => { it.type = sel.value; save(); renderRows(); }; tdType.appendChild(sel); tr.appendChild(tdType);
     const tdN = document.createElement('td'); const inN = document.createElement('input'); inN.className='name'; inN.type='text'; inN.value=it.name||''; inN.placeholder='Name / Beschreibung';

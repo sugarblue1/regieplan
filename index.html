@@ -142,8 +142,8 @@
     <div class="card">
       <div class="settings">
         <div class="field"><label>Titel für den Plan</label><input type="text" id="title" placeholder="z.B. Bühne Samstag"></div>
-        <div class="field"><label>Muss fertig sein um</label><input type="time" id="endTime"></div>
-        <div class="field"><label>Frühester Beginn</label><input type="time" id="earliest"></div>
+        <div class="field"><label>Muss fertig sein um</label><input type="text" id="endTime" inputmode="numeric" placeholder="z.B. 23:00"></div>
+        <div class="field"><label>Frühester Beginn</label><input type="text" id="earliest" inputmode="numeric" placeholder="z.B. 15:00"></div>
       </div>
       <div class="status" id="status"></div>
       <div class="remotehint" id="remotehint">Es gibt neue Änderungen von jemand anderem. Sobald du hier fertig getippt hast, werden sie übernommen.</div>
@@ -162,7 +162,6 @@
         <button style="background:#3FB873" onclick="addItem('redebeitrag')">+ Redebeitrag</button>
         <button style="background:#3FA9DC" onclick="addItem('moderation')">+ Moderation</button>
         <button style="background:#C62828" onclick="addItem('umbaumod')">+ Umbau / Moderation</button>
-        <button style="background:#E23B2E" onclick="addItem('pause')">+ Umbau / Pause</button>
       </div>
       <div class="totbar" id="totbar"></div>
     </div>
@@ -208,8 +207,7 @@ const TYPES = {
   sosa:        { label: 'SOSA',          color: '#8E6FD0', tint: '#E2D8F5' },
   redebeitrag: { label: 'Redebeitrag',   color: '#3FB873', tint: '#CDEDD8' },
   moderation:  { label: 'Moderation',         color: '#3FA9DC', tint: '#CDE9F7' },
-  umbaumod:    { label: 'Umbau / Moderation', color: '#C62828', tint: '#F1C7C2' },
-  pause:       { label: 'Umbau / Pause',      color: '#E23B2E', tint: '#F7CFCB' }
+  umbaumod:    { label: 'Umbau / Moderation', color: '#C62828', tint: '#F1C7C2' }
 };
 
 /* ====== Startwerte, falls die Datenbank noch leer ist (ohne Programm, das liegt geschützt in der Datenbank) ====== */
@@ -360,6 +358,20 @@ document.addEventListener('focusout', () => setTimeout(() => {
 /* ====== Berechnung ====== */
 function ev(){ return state.events[state.active]; }
 function toMin(t){ const [h,m] = (t||'0:0').split(':').map(Number); return h*60+m; }
+function parseTimeInput(str){
+  if (str == null) return null;
+  let s = String(str).trim().replace(/[.,;\s]+/g, ':');
+  let h, m;
+  if (s.includes(':')){ const p = s.split(':'); h = parseInt(p[0],10); m = parseInt(p[1]||'0',10); }
+  else { const d = s.replace(/\D/g,''); if (!d) return null;
+    if (d.length<=2){ h = parseInt(d,10); m = 0; }
+    else if (d.length===3){ h = parseInt(d.slice(0,1),10); m = parseInt(d.slice(1),10); }
+    else { h = parseInt(d.slice(0,2),10); m = parseInt(d.slice(2,4),10); } }
+  if (isNaN(h)||isNaN(m)) return null;
+  if (h===24 && m===0) h = 0;
+  if (h<0||h>23||m<0||m>59) return null;
+  return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
+}
 function fmt(mins){ mins = ((mins%1440)+1440)%1440; const h=Math.floor(mins/60), m=mins%60; return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0'); }
 function newId(){ return 'i'+(counter++)+'_'+Math.floor((state.events.freitag.items.length+state.events.samstag.items.length)*7+1); }
 
@@ -467,12 +479,12 @@ function renderPresets(){
   add.textContent='+ Neue Vorlage'; add.onclick=()=>{ state.presets.push({label:'Neu', min:3}); save(); renderPresets(); };
   box.appendChild(add);
 }
-function addItem(type){ ev().items.push({ id:newId(), type, name:'', min: type==='pause'?5:10 }); save(); renderRows(); renderStatus(); renderTot(); }
+function addItem(type){ ev().items.push({ id:newId(), type, name:'', min: 10 }); save(); renderRows(); renderStatus(); renderTot(); }
 function addModeration(p){ ev().items.push({ id:newId(), type:'moderation', name:p.label, min:Number(p.min)||0 }); save(); renderRows(); renderStatus(); renderTot(); }
 
 document.getElementById('title').oninput = e => { ev().title = e.target.value; save(); };
-document.getElementById('endTime').oninput = e => { ev().endTime = e.target.value; save(); renderRows(); renderStatus(); };
-document.getElementById('earliest').oninput = e => { ev().earliest = e.target.value; save(); renderStatus(); };
+document.getElementById('endTime').onchange = e => { const v = parseTimeInput(e.target.value); if (v) ev().endTime = v; e.target.value = ev().endTime; save(); renderRows(); renderStatus(); };
+document.getElementById('earliest').onchange = e => { const v = parseTimeInput(e.target.value); if (v) ev().earliest = v; e.target.value = ev().earliest; save(); renderStatus(); };
 
 /* ====== Export ====== */
 function planTable(){

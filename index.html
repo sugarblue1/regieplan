@@ -138,7 +138,7 @@
       </div>
       <div class="status" id="status"></div>
       <div class="remotehint" id="remotehint">Es gibt neue Änderungen von jemand anderem. Sobald du hier fertig getippt hast, werden sie übernommen.</div>
-      <div class="hint">Das Ende ist fix. Die App rechnet aus, wann du spätestens anfangen musst, damit es genau aufgeht.</div>
+      <div class="hint">Das Ende bleibt immer fest. Wenn es eng wird, wird nur vorne beim Anfang Platz gemacht, nie hinten bei den Künstlern. Längen ändern sich nur, wenn du sie selbst eintippst.</div>
     </div>
 
     <div class="card">
@@ -331,12 +331,14 @@ function renderStatus(){
   const el = document.getElementById('status');
   if (c.total === 0){ el.className = 'status ok'; el.innerHTML = 'Noch keine Programmpunkte eingetragen.'; return; }
   const startClock = fmt(c.startProgram);
+  const endClock = fmt(c.endM);
   if (c.total > windowLen){
+    const over = c.total - windowLen;
     el.className = 'status bad';
-    el.innerHTML = 'Passt noch nicht. Du müsstest schon um <b>'+startClock+'</b> anfangen, das ist vor deinem frühesten Beginn. Du bist <b>'+(c.total-windowLen)+' Minuten</b> zu viel im Programm.';
+    el.innerHTML = 'Das Ende bleibt fest um <b>'+endClock+'</b>. Dafür müsstest du vorne schon um <b>'+startClock+'</b> anfangen, das sind <b>'+over+' Minuten</b> vor deinem frühesten Beginn ('+e.earliest+'). Entweder vorne früher anfangen, oder vorne bei der ersten Nummer etwas kürzen. Am Ende und an den Künstlern wird nichts weggenommen.';
   } else {
     el.className = 'status ok';
-    el.innerHTML = 'Passt. Du musst spätestens um <b>'+startClock+'</b> anfangen und bist um <b>'+fmt(c.endM)+'</b> fertig. Puffer bis zum frühesten Beginn: <b>'+(windowLen-c.total)+' Minuten</b>.';
+    el.innerHTML = 'Passt. Du fängst vorne um <b>'+startClock+'</b> an und bist fest um <b>'+endClock+'</b> fertig. Vorne hast du noch <b>'+(windowLen-c.total)+' Minuten</b> Luft bis zum frühesten Beginn.';
   }
 }
 function renderRows(){
@@ -354,6 +356,7 @@ function renderRows(){
     for (const k in TYPES){ const o=document.createElement('option'); o.value=k; o.textContent=TYPES[k].label; if(k===it.type)o.selected=true; sel.appendChild(o); }
     sel.onchange = () => { it.type = sel.value; save(); renderRows(); }; tdType.appendChild(sel); tr.appendChild(tdType);
     const tdN = document.createElement('td'); const inN = document.createElement('textarea'); inN.className='name'; inN.rows=1; inN.value=it.name||''; inN.placeholder='Name / Beschreibung';
+    inN.style.background = ty.tint;
     const grow = () => { inN.style.height='auto'; inN.style.height=(inN.scrollHeight+2)+'px'; };
     inN.oninput = () => { it.name = inN.value; grow(); save(); }; tdN.appendChild(inN); tr.appendChild(tdN);
     const tdM = document.createElement('td'); const inM = document.createElement('input'); inM.className='min'; inM.type='number'; inM.min='0'; inM.value=it.min;

@@ -58,7 +58,8 @@
   .timeedit:hover { border-color:#e0dccf; background:#faf9f6; }
   .timeedit:focus { border-color:#007E89; background:#fff; outline:none; }
   .timeedit.locked { background:#e3f3f4; border-color:#bfe3e6; }
-  .timesub { font-size:11px; color:#9aa3ab; margin:2px 0 0 5px; }
+  .timesub { font-size:11px; color:#9aa3ab; margin:2px 0 0 5px; display:flex; align-items:center; gap:3px; }
+  .timeedit.end { width:62px; font-size:13px; font-weight:600; color:#6b7680; }
   select.type { width: 150px; }
   .stage { display:flex; flex-direction:column; gap:5px; }
   .stage input.people { width:66px; padding:6px 8px; border:1px solid #d6cfc2; border-radius:6px; font-size:13px; text-align:center; background:#faf9f6; }
@@ -233,7 +234,7 @@ const TYPES = {
   videoton:    { label: 'Videoclip mit Ton',  color: '#3949AB', tint: '#CDD3F0' }
 };
 const ICONS = {
-  einhorn: { label: 'Einhorn', svg: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 20c-.5-4 1.6-7.6 5-8.6"/><path d="M9.5 11.4c1-.7 2.2-1 3.5-1 3 0 4.6 2.6 4.6 5.6"/><path d="M12.8 10.6l1.4-5.4 2.4 3.3-1.4 2.1"/><path d="M9.8 9.2l.9-2.6"/></svg>' },
+  einhorn: { label: 'Einhorn', svg: '<span style="filter:grayscale(1);font-size:15px;line-height:1">🦄</span>' },
   band: { label: 'Band', svg: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="18" r="2.6"/><circle cx="17" cy="16" r="2.6"/><path d="M8.6 18V5.5L19.6 3.6V16"/><path d="M8.6 9.2l11-1.9"/></svg>' },
   blaster: { label: 'Gettoblaster', svg: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="7.5" width="19" height="12" rx="1.8"/><path d="M6.5 7.5V5.6a1.8 1.8 0 0 1 1.8-1.8h7.4a1.8 1.8 0 0 1 1.8 1.8v1.9"/><circle cx="8" cy="13.5" r="2.4"/><circle cx="16" cy="13.5" r="2.4"/></svg>' },
   micro: { label: 'Mikro', svg: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5.5 10.5a6.5 6.5 0 0 0 13 0"/><line x1="12" y1="17" x2="12" y2="21.5"/><line x1="8.5" y1="21.5" x2="15.5" y2="21.5"/></svg>' }
@@ -419,8 +420,12 @@ function computed(){
   const startProgram = endM - total;
   let clock = startProgram;
   const rows = e.items.map(it => {
-    const start = (it.lock && it.lockTime) ? toMin(it.lockTime) : clock;
-    const end = start + (Number(it.min)||0);
+    const m = Number(it.min)||0;
+    let start, end;
+    if (it.lock && it.lockTime){
+      if (it.lockMode === 'end'){ end = toMin(it.lockTime); start = end - m; }
+      else { start = toMin(it.lockTime); end = start + m; }
+    } else { start = clock; end = start + m; }
     clock = end;
     return { it, startM: start, endM: end };
   });
@@ -477,26 +482,32 @@ function renderRows(){
     const badge = document.createElement('span'); badge.className='badge'; badge.style.background = ty.color; tdB.appendChild(badge); tr.appendChild(tdB);
     const tdT = document.createElement('td'); tdT.className='timecell';
     const locked = !!(it.lock && it.lockTime);
-    const tMain = document.createElement('input'); tMain.className = 'timeedit' + (locked ? ' locked' : ''); tMain.type='text'; tMain.inputMode='numeric'; tMain.value = fmt(r.startM);
-    tMain.title = 'Feste Uhrzeit eintragen';
-    tMain.onchange = () => { const v = parseTimeInput(tMain.value); if (v){ it.lock = true; it.lockTime = v; } save(); renderRows(); renderStatus(); };
-    tdT.appendChild(tMain);
-    const sub = document.createElement('div'); sub.className='timesub'; sub.textContent = 'bis ' + fmt(r.endM); tdT.appendChild(sub);
+    const startLocked = locked && it.lockMode !== 'end';
+    const endLocked = locked && it.lockMode === 'end';
+    const tStart = document.createElement('input'); tStart.className = 'timeedit' + (startLocked ? ' locked' : ''); tStart.type='text'; tStart.inputMode='numeric'; tStart.value = fmt(r.startM); tStart.title = 'Startzeit festmachen';
+    tStart.onchange = () => { const v = parseTimeInput(tStart.value); if (v){ it.lock = true; it.lockMode = 'start'; it.lockTime = v; } save(); renderRows(); renderStatus(); };
+    tdT.appendChild(tStart);
+    const sub = document.createElement('div'); sub.className='timesub'; sub.appendChild(document.createTextNode('bis '));
+    const tEnd = document.createElement('input'); tEnd.className = 'timeedit end' + (endLocked ? ' locked' : ''); tEnd.type='text'; tEnd.inputMode='numeric'; tEnd.value = fmt(r.endM); tEnd.title = 'Endzeit festmachen';
+    tEnd.onchange = () => { const v = parseTimeInput(tEnd.value); if (v){ it.lock = true; it.lockMode = 'end'; it.lockTime = v; } save(); renderRows(); renderStatus(); };
+    sub.appendChild(tEnd); tdT.appendChild(sub);
     const lockWrap = document.createElement('div'); lockWrap.className='lockwrap';
     const lockBtn = document.createElement('button'); lockBtn.className = 'lockbtn' + (locked ? ' on' : ''); lockBtn.innerHTML = locked ? LOCK_CLOSED : LOCK_OPEN;
-    lockBtn.title = locked ? 'Feste Zeit lösen' : 'Diese Zeit festmachen';
-    lockBtn.onclick = () => { it.lock = !it.lock; if (it.lock && !it.lockTime) it.lockTime = fmt(r.startM); save(); renderRows(); renderStatus(); };
+    lockBtn.title = locked ? 'Feste Zeit lösen' : 'Startzeit festmachen';
+    lockBtn.onclick = () => { it.lock = !it.lock; if (it.lock && !it.lockTime){ it.lockMode = 'start'; it.lockTime = fmt(r.startM); } save(); renderRows(); renderStatus(); };
     lockWrap.appendChild(lockBtn);
     tdT.appendChild(lockWrap);
     tr.appendChild(tdT);
     const tdType = document.createElement('td'); const sel = document.createElement('select'); sel.className='type';
     sel.style.background = ty.tint; sel.style.fontWeight = '600';
     for (const k in TYPES){ const o=document.createElement('option'); o.value=k; o.textContent=TYPES[k].label; if(k===it.type)o.selected=true; sel.appendChild(o); }
-    sel.onchange = () => { it.type = sel.value; save(); renderRows(); }; tdType.appendChild(sel); tr.appendChild(tdType);
+    sel.onchange = () => { it.type = sel.value; if (it.type==='moderation'){ it.people = null; if(!Array.isArray(it.icons)) it.icons=[]; if(!it.icons.includes('micro')) it.icons.push('micro'); } save(); renderRows(); }; tdType.appendChild(sel); tr.appendChild(tdType);
     const tdS = document.createElement('td'); const stage = document.createElement('div'); stage.className='stage';
-    const ppl = document.createElement('input'); ppl.className='people'; ppl.type='number'; ppl.min='0'; ppl.placeholder='Pers.'; ppl.value = (it.people!=null ? it.people : '');
-    ppl.oninput = () => { it.people = (ppl.value===''? null : (Number(ppl.value)||0)); save(); };
-    stage.appendChild(ppl);
+    if (it.type !== 'moderation'){
+      const ppl = document.createElement('input'); ppl.className='people'; ppl.type='number'; ppl.min='0'; ppl.placeholder='Pers.'; ppl.value = (it.people!=null ? it.people : '');
+      ppl.oninput = () => { it.people = (ppl.value===''? null : (Number(ppl.value)||0)); save(); };
+      stage.appendChild(ppl);
+    }
     const iconRow = document.createElement('div'); iconRow.className='iconrow';
     for (const key in ICONS){
       const ib = document.createElement('button'); const on = Array.isArray(it.icons) && it.icons.includes(key);
@@ -539,7 +550,7 @@ function fillToNext(idx){
   let j = -1;
   for (let k=idx+1; k<items.length; k++){ if (items[k].lock && items[k].lockTime){ j = k; break; } }
   let target, between = 0;
-  if (j >= 0){ target = toMin(items[j].lockTime); for (let k=idx+1; k<j; k++) between += (Number(items[k].min)||0); }
+  if (j >= 0){ target = c.rows[j].startM; for (let k=idx+1; k<j; k++) between += (Number(items[k].min)||0); }
   else { target = toMin(ev().endTime); for (let k=idx+1; k<items.length; k++) between += (Number(items[k].min)||0); }
   const s = ((startM % 1440) + 1440) % 1440;
   let targetAbs = target; if (targetAbs <= s) targetAbs += 1440;
@@ -567,7 +578,7 @@ function renderPresets(){
   add.textContent='+ Neue Vorlage'; add.onclick=()=>{ state.presets.push({label:'Neu', min:3}); save(); renderPresets(); };
   box.appendChild(add);
 }
-function addItem(type){ ev().items.push({ id:newId(), type, name:'', min: 10 }); save(); renderRows(); renderStatus(); renderTot(); }
+function addItem(type){ const nit = { id:newId(), type, name:'', min: 10 }; if (type==='moderation') nit.icons = ['micro']; ev().items.push(nit); save(); renderRows(); renderStatus(); renderTot(); }
 function addModeration(p){ ev().items.push({ id:newId(), type:'moderation', name:p.label, min:Number(p.min)||0 }); save(); renderRows(); renderStatus(); renderTot(); }
 
 document.getElementById('title').oninput = e => { ev().title = e.target.value; save(); };

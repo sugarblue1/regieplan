@@ -402,12 +402,16 @@ function computed(){
   const total = e.items.reduce((s,it)=> s + (Number(it.min)||0), 0);
   const endM = toMin(e.endTime);
   const startProgram = endM - total;
-  let acc = 0;
+  let clock = startProgram;
   const rows = e.items.map(it => {
-    const start = startProgram + acc; acc += (Number(it.min)||0);
-    return { it, startM: start, endM: startProgram + acc };
+    const start = (it.lock && it.lockTime) ? toMin(it.lockTime) : clock;
+    const end = start + (Number(it.min)||0);
+    clock = end;
+    return { it, startM: start, endM: end };
   });
-  return { total, endM, startProgram, rows };
+  const firstStart = rows.length ? rows[0].startM : startProgram;
+  const lastEnd = rows.length ? rows[rows.length-1].endM : endM;
+  return { total, endM, startProgram, rows, firstStart, lastEnd };
 }
 
 /* ====== Anzeige ====== */
@@ -429,25 +433,22 @@ function renderSettings(){
 }
 function renderStatus(){
   const c = computed(); const e = ev();
-  const earliestM = toMin(e.earliest), endM = toMin(e.endTime);
-  let windowLen = (endM - earliestM + 1440) % 1440; if (windowLen === 0) windowLen = 1440;
   const el = document.getElementById('status');
   if (c.total === 0){ el.className = 'status ok'; el.innerHTML = 'Noch keine Programmpunkte eingetragen.'; return; }
-  const startClock = fmt(c.startProgram);
-  const endClock = fmt(c.endM);
-  if (c.total > windowLen){
-    const over = c.total - windowLen;
-    el.className = 'status bad';
-    el.innerHTML = 'Das Ende bleibt fest um <b>'+endClock+'</b>. Dafür müsstest du vorne schon um <b>'+startClock+'</b> anfangen, das sind <b>'+over+' Minuten</b> vor deinem frühesten Beginn ('+e.earliest+'). Entweder vorne früher anfangen, oder vorne bei der ersten Nummer etwas kürzen. Am Ende und an den Künstlern wird nichts weggenommen.';
-  } else {
+  const startClock = fmt(c.firstStart);
+  const endClock = fmt(c.lastEnd);
+  const targetEnd = toMin(e.endTime);
+  let endOff = ((c.lastEnd - targetEnd) % 1440 + 1440) % 1440; if (endOff > 720) endOff -= 1440;
+  const earliestM = toMin(e.earliest);
+  const nf = ((c.firstStart % 1440) + 1440) % 1440;
+  const note = (nf < earliestM) ? ' Achtung, der Anfang liegt vor deinem frühesten Beginn ('+e.earliest+').' : '';
+  if (endOff === 0){
     el.className = 'status ok';
-    el.innerHTML = 'Passt. Du fängst vorne um <b>'+startClock+'</b> an und bist fest um <b>'+endClock+'</b> fertig. Vorne hast du noch <b>'+(windowLen-c.total)+' Minuten</b> Luft bis zum frühesten Beginn.';
-  }
-  const locks = c.rows.filter(r => r.it.lock && r.it.lockTime);
-  if (locks.length){
-    const bad = locks.map(r => ({ r, off: drift(r.startM, toMin(r.it.lockTime)) })).filter(x => x.off !== 0);
-    if (!bad.length) el.innerHTML += '<div style="margin-top:8px;color:#1c6b3e">Alle festen Zeiten sitzen genau.</div>';
-    else el.innerHTML += '<div style="margin-top:8px;color:#a8331f">Feste Zeiten stimmen noch nicht: ' + bad.map(x => esc(x.r.it.name||'Punkt') + ' soll ' + x.r.it.lockTime + ', liegt bei ' + fmt(x.r.startM) + ' (' + (x.off>0?'+':'') + x.off + ' Min)').join('; ') + '</div>';
+    el.innerHTML = 'Anfang <b>'+startClock+'</b>, Ende <b>'+endClock+'</b>. Endet genau pünktlich.' + note;
+  } else {
+    el.className = 'status bad';
+    const w = endOff > 0 ? (endOff + ' Minuten zu spät') : ((-endOff) + ' Minuten zu früh');
+    el.innerHTML = 'Anfang <b>'+startClock+'</b>, Ende <b>'+endClock+'</b>. Das ist <b>'+w+'</b> gegenüber deiner Zielzeit '+e.endTime+'. Passe die Längen oder eine feste Zeit an, bis es pünktlich endet.' + note;
   }
 }
 function renderRows(){
@@ -461,23 +462,16 @@ function renderRows(){
     const badge = document.createElement('span'); badge.className='badge'; badge.style.background = ty.color; tdB.appendChild(badge); tr.appendChild(tdB);
     const tdT = document.createElement('td'); tdT.className='timecell';
     const locked = !!(it.lock && it.lockTime);
-    const startShown = locked ? it.lockTime : fmt(r.startM);
-    const endShown = locked ? fmt(toMin(it.lockTime) + (Number(it.min)||0)) : fmt(r.endM);
-    const tMain = document.createElement('input'); tMain.className = 'timeedit' + (locked ? ' locked' : ''); tMain.type='text'; tMain.inputMode='numeric'; tMain.value = startShown;
+    const tMain = document.createElement('input'); tMain.className = 'timeedit' + (locked ? ' locked' : ''); tMain.type='text'; tMain.inputMode='numeric'; tMain.value = fmt(r.startM);
     tMain.title = 'Feste Uhrzeit eintragen';
     tMain.onchange = () => { const v = parseTimeInput(tMain.value); if (v){ it.lock = true; it.lockTime = v; } save(); renderRows(); renderStatus(); };
     tdT.appendChild(tMain);
-    const sub = document.createElement('div'); sub.className='timesub'; sub.textContent = 'bis ' + endShown; tdT.appendChild(sub);
+    const sub = document.createElement('div'); sub.className='timesub'; sub.textContent = 'bis ' + fmt(r.endM); tdT.appendChild(sub);
     const lockWrap = document.createElement('div'); lockWrap.className='lockwrap';
     const lockBtn = document.createElement('button'); lockBtn.className = 'lockbtn' + (locked ? ' on' : ''); lockBtn.innerHTML = locked ? LOCK_CLOSED : LOCK_OPEN;
     lockBtn.title = locked ? 'Feste Zeit lösen' : 'Diese Zeit festmachen';
     lockBtn.onclick = () => { it.lock = !it.lock; if (it.lock && !it.lockTime) it.lockTime = fmt(r.startM); save(); renderRows(); renderStatus(); };
     lockWrap.appendChild(lockBtn);
-    if (locked){
-      const off = drift(r.startM, toMin(it.lockTime));
-      const dr = document.createElement('span'); dr.className = 'drift ' + (off===0 ? 'okd' : 'badd'); dr.textContent = off===0 ? 'sitzt genau' : ('frei ' + fmt(r.startM) + ' (' + (off>0?'+':'') + off + ' Min)');
-      lockWrap.appendChild(dr);
-    }
     tdT.appendChild(lockWrap);
     tr.appendChild(tdT);
     const tdType = document.createElement('td'); const sel = document.createElement('select'); sel.className='type';
@@ -538,8 +532,8 @@ document.getElementById('earliest').onchange = e => { const v = parseTimeInput(e
 function planTable(){
   const c = computed(); const e = ev();
   const head = ['Uhrzeit','Bis','Art','Programmpunkt','Minuten','Video'];
-  const lines = c.rows.map(r => { const lk = r.it.lock && r.it.lockTime; const st = lk ? r.it.lockTime : fmt(r.startM); const en = lk ? fmt(toMin(r.it.lockTime)+(Number(r.it.min)||0)) : fmt(r.endM); return [ st, en, (TYPES[r.it.type]||TYPES.kuenstler).label, r.it.name||'', String(r.it.min), r.it.video||'' ]; });
-  return { head, lines, title: e.title, start: fmt(c.startProgram), end: fmt(c.endM) };
+  const lines = c.rows.map(r => [ fmt(r.startM), fmt(r.endM), (TYPES[r.it.type]||TYPES.kuenstler).label, r.it.name||'', String(r.it.min), r.it.video||'' ]);
+  return { head, lines, title: e.title, start: fmt(c.firstStart), end: fmt(c.lastEnd) };
 }
 function copyForSheets(){
   const p = planTable();

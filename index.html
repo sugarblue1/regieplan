@@ -62,7 +62,9 @@
   .timeedit.end { width:62px; font-size:13px; font-weight:600; color:#6b7680; }
   select.type { width: 150px; }
   .stage { display:flex; flex-direction:row; align-items:center; gap:8px; }
-  .stage input.people { width:66px; padding:6px 8px; border:1px solid #d6cfc2; border-radius:6px; font-size:13px; text-align:center; background:#faf9f6; }
+  .stage input.people { width:46px; padding:6px 6px; border:1px solid #d6cfc2; border-radius:6px; font-size:13px; text-align:center; background:#faf9f6; }
+  input[type=number] { -moz-appearance:textfield; appearance:textfield; }
+  input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
   .iconrow { display:flex; gap:4px; flex-wrap:wrap; }
   .iconbtn { width:28px; height:28px; display:flex; align-items:center; justify-content:center; border:1px solid #ded8cc; background:#f7f5f0; border-radius:6px; cursor:pointer; color:#b3bac1; padding:0; }
   .iconbtn.on { color:#23303a; background:#e6e2d9; border-color:#c7c0b2; }
@@ -234,7 +236,7 @@ const TYPES = {
   videoton:    { label: 'Videoclip mit Ton',  color: '#3949AB', tint: '#CDD3F0' }
 };
 const ICONS = {
-  einhorn: { label: 'Einhorn', svg: '<span style="filter:grayscale(1);font-size:15px;line-height:1">🦄</span>' },
+  einhorn: { label: 'Einhorn', svg: '<span style="filter:grayscale(1);opacity:.5;font-size:14px;line-height:1">🦄</span>' },
   band: { label: 'Band', svg: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="18" r="2.6"/><circle cx="17" cy="16" r="2.6"/><path d="M8.6 18V5.5L19.6 3.6V16"/><path d="M8.6 9.2l11-1.9"/></svg>' },
   blaster: { label: 'Gettoblaster', svg: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="7.5" width="19" height="12" rx="1.8"/><path d="M6.5 7.5V5.6a1.8 1.8 0 0 1 1.8-1.8h7.4a1.8 1.8 0 0 1 1.8 1.8v1.9"/><circle cx="8" cy="13.5" r="2.4"/><circle cx="16" cy="13.5" r="2.4"/></svg>' },
   micro: { label: 'Mikro', svg: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5.5 10.5a6.5 6.5 0 0 0 13 0"/><line x1="12" y1="17" x2="12" y2="21.5"/><line x1="8.5" y1="21.5" x2="15.5" y2="21.5"/></svg>' }

@@ -61,7 +61,7 @@
   .timesub { font-size:11px; color:#9aa3ab; margin:2px 0 0 5px; display:flex; align-items:center; gap:3px; }
   .timeedit.end { width:62px; font-size:13px; font-weight:600; color:#6b7680; }
   select.type { width: 150px; }
-  .stage { display:flex; flex-direction:column; gap:5px; }
+  .stage { display:flex; flex-direction:row; align-items:center; gap:8px; }
   .stage input.people { width:66px; padding:6px 8px; border:1px solid #d6cfc2; border-radius:6px; font-size:13px; text-align:center; background:#faf9f6; }
   .iconrow { display:flex; gap:4px; flex-wrap:wrap; }
   .iconbtn { width:28px; height:28px; display:flex; align-items:center; justify-content:center; border:1px solid #ded8cc; background:#f7f5f0; border-radius:6px; cursor:pointer; color:#b3bac1; padding:0; }
@@ -173,7 +173,7 @@
     <div class="card">
       <h2>Programm</h2>
       <table class="plan">
-        <thead><tr><th class="hcol"></th><th class="hcol"></th><th>Uhrzeit</th><th>Art</th><th>Bühne</th><th>Programmpunkt</th><th>Minuten</th><th>Video</th><th></th></tr></thead>
+        <thead><tr><th class="hcol"></th><th class="hcol"></th><th>Uhrzeit</th><th>Art</th><th title="Anzahl der Leute auf der Bühne und passende Symbole">Bühne</th><th>Programmpunkt</th><th>Minuten</th><th>Video</th><th></th></tr></thead>
         <tbody id="rows"></tbody>
       </table>
       <div class="addbar" id="addbar">
@@ -505,6 +505,7 @@ function renderRows(){
     const tdS = document.createElement('td'); const stage = document.createElement('div'); stage.className='stage';
     if (it.type !== 'moderation'){
       const ppl = document.createElement('input'); ppl.className='people'; ppl.type='number'; ppl.min='0'; ppl.placeholder='Pers.'; ppl.value = (it.people!=null ? it.people : '');
+      ppl.title = 'Anzahl der Leute auf der Bühne';
       ppl.oninput = () => { it.people = (ppl.value===''? null : (Number(ppl.value)||0)); save(); };
       stage.appendChild(ppl);
     }

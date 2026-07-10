@@ -161,7 +161,7 @@
         <button style="background:#8E6FD0" onclick="addItem('sosa')">+ SOSA</button>
         <button style="background:#3FB873" onclick="addItem('redebeitrag')">+ Redebeitrag</button>
         <button style="background:#3FA9DC" onclick="addItem('moderation')">+ Moderation</button>
-        <button style="background:#C62828" onclick="addItem('umbaumod')">+ Umbau / Moderation</button>
+        <button style="background:#D32F2F" onclick="addItem('umbaumod')">+ Umbau / Moderation</button>
       </div>
       <div class="totbar" id="totbar"></div>
     </div>
@@ -207,7 +207,7 @@ const TYPES = {
   sosa:        { label: 'SOSA',          color: '#8E6FD0', tint: '#E2D8F5' },
   redebeitrag: { label: 'Redebeitrag',   color: '#3FB873', tint: '#CDEDD8' },
   moderation:  { label: 'Moderation',         color: '#3FA9DC', tint: '#CDE9F7' },
-  umbaumod:    { label: 'Umbau / Moderation', color: '#C62828', tint: '#F1C7C2' }
+  umbaumod:    { label: 'Umbau / Moderation', color: '#D32F2F', tint: '#F3A39B' }
 };
 
 /* ====== Startwerte, falls die Datenbank noch leer ist (ohne Programm, das liegt geschützt in der Datenbank) ====== */
@@ -251,6 +251,7 @@ async function startApp(){
   document.getElementById('gate').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   const el = document.getElementById('whoami'); if (el) el.textContent = 'Du: ' + myName;
+  state.active = localStorage.getItem('regieplan_day') || 'samstag';
   await initData();
   subscribeRealtime();
   renderAll();
@@ -395,7 +396,7 @@ function renderTabs(){
     const b = document.createElement('button');
     b.textContent = key === 'freitag' ? 'Freitag' : 'Samstag';
     if (state.active === key) b.className = 'active';
-    b.onclick = () => { state.active = key; renderAll(); };
+    b.onclick = () => { state.active = key; localStorage.setItem('regieplan_day', key); renderAll(); };
     t.appendChild(b);
   }
 }

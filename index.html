@@ -20,7 +20,7 @@
   header.top .live { font-size: 12px; color: #8fe3c0; margin-top: 6px; }
   header.top .logout { float: right; font-size: 12px; color: #b9c4cc; cursor: pointer; text-decoration: underline; }
 
-  .wrap { max-width: 1000px; margin: 0 auto; padding: 20px; }
+  .wrap { max-width: 1500px; margin: 0 auto; padding: 20px; }
 
   .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
   .tabs button { flex: 1; padding: 12px; font-size: 15px; font-weight: 700; border: none; border-radius: 10px; cursor: pointer; background: #e2ddd2; color: #5b6670; }
@@ -48,10 +48,11 @@
   .timecell { font-weight: 700; font-size: 16px; white-space: nowrap; color: #0d7d8a; }
   .timecell small { display:block; font-weight:500; font-size:11px; color:#9aa3ab; }
 
-  select.type, input.name, textarea.name, input.min { padding: 7px 8px; border: 1px solid #d6cfc2; border-radius: 7px; font-size: 14px; background: #faf9f6; width: 100%; }
+  select.type, input.name, textarea.name, textarea.video, input.min { padding: 7px 8px; border: 1px solid #d6cfc2; border-radius: 7px; font-size: 14px; background: #faf9f6; width: 100%; }
   input.min { width: 62px; text-align: center; }
-  .name { width: 100%; min-width: 280px; }
-  textarea.name { resize: vertical; line-height: 1.4; min-height: 36px; font-family: inherit; overflow: hidden; }
+  .name { width: 100%; min-width: 340px; }
+  .video { width: 100%; min-width: 240px; }
+  textarea.name, textarea.video { resize: vertical; line-height: 1.4; min-height: 36px; font-family: inherit; overflow: hidden; }
 
   .badge { width: 11px; height: 34px; border-radius: 4px; display: inline-block; }
   table.plan tbody tr:nth-child(even) { background: #f3f2ef; }
@@ -143,7 +144,7 @@
     <div class="card">
       <h2>Programm</h2>
       <table class="plan">
-        <thead><tr><th class="hcol"></th><th class="hcol"></th><th>Uhrzeit</th><th>Art</th><th>Programmpunkt</th><th>Minuten</th><th></th></tr></thead>
+        <thead><tr><th class="hcol"></th><th class="hcol"></th><th>Uhrzeit</th><th>Art</th><th>Programmpunkt</th><th>Minuten</th><th>Video</th><th></th></tr></thead>
         <tbody id="rows"></tbody>
       </table>
       <div class="addbar" id="addbar">
@@ -357,6 +358,9 @@ function renderRows(){
     inN.oninput = () => { it.name = inN.value; grow(); save(); }; tdN.appendChild(inN); tr.appendChild(tdN);
     const tdM = document.createElement('td'); const inM = document.createElement('input'); inM.className='min'; inM.type='number'; inM.min='0'; inM.value=it.min;
     inM.oninput = () => { it.min = Number(inM.value)||0; save(); renderRows(); renderStatus(); renderTot(); }; tdM.appendChild(inM); tr.appendChild(tdM);
+    const tdV = document.createElement('td'); const inV = document.createElement('textarea'); inV.className='video'; inV.rows=1; inV.value=it.video||''; inV.placeholder='Was läuft auf der Leinwand?';
+    const growV = () => { inV.style.height='auto'; inV.style.height=(inV.scrollHeight+2)+'px'; };
+    inV.oninput = () => { it.video = inV.value; growV(); save(); }; tdV.appendChild(inV); tr.appendChild(tdV);
     const tdBt = document.createElement('td'); const wrap = document.createElement('div'); wrap.className='rowbtns';
     const del = btn('✕', () => { ev().items.splice(idx,1); save(); renderRows(); renderStatus(); renderTot(); }); del.className='del';
     wrap.append(del); tdBt.appendChild(wrap); tr.appendChild(tdBt);
@@ -365,7 +369,7 @@ function renderRows(){
     tr.addEventListener('dragover', e => e.preventDefault());
     tr.addEventListener('drop', e => { e.preventDefault(); dropOn(idx); });
     tb.appendChild(tr);
-    grow();
+    grow(); growV();
   });
 }
 function btn(txt, fn){ const b=document.createElement('button'); b.textContent=txt; b.onclick=fn; return b; }
@@ -401,8 +405,8 @@ document.getElementById('earliest').oninput = e => { ev().earliest = e.target.va
 /* ====== Export ====== */
 function planTable(){
   const c = computed(); const e = ev();
-  const head = ['Uhrzeit','Bis','Art','Programmpunkt','Minuten'];
-  const lines = c.rows.map(r => [ fmt(r.startM), fmt(r.endM), TYPES[r.it.type].label, r.it.name||'', String(r.it.min) ]);
+  const head = ['Uhrzeit','Bis','Art','Programmpunkt','Minuten','Video'];
+  const lines = c.rows.map(r => [ fmt(r.startM), fmt(r.endM), (TYPES[r.it.type]||TYPES.kuenstler).label, r.it.name||'', String(r.it.min), r.it.video||'' ]);
   return { head, lines, title: e.title, start: fmt(c.startProgram), end: fmt(c.endM) };
 }
 function copyForSheets(){
@@ -424,8 +428,8 @@ function downloadCsv(){
 function printPlan(){
   const p = planTable(); const area = document.getElementById('printarea');
   let html = '<h1>'+(p.title||'Regieplan')+'</h1><div class="meta">Beginn '+p.start+' Uhr, Ende '+p.end+' Uhr</div>';
-  html += '<table><thead><tr><th>Uhrzeit</th><th>Bis</th><th>Art</th><th>Programmpunkt</th><th>Min</th></tr></thead><tbody>';
-  for (const l of p.lines) html += '<tr><td class="t">'+l[0]+'</td><td>'+l[1]+'</td><td>'+l[2]+'</td><td>'+l[3]+'</td><td>'+l[4]+'</td></tr>';
+  html += '<table><thead><tr><th>Uhrzeit</th><th>Bis</th><th>Art</th><th>Programmpunkt</th><th>Min</th><th>Video</th></tr></thead><tbody>';
+  for (const l of p.lines) html += '<tr><td class="t">'+l[0]+'</td><td>'+l[1]+'</td><td>'+l[2]+'</td><td>'+l[3]+'</td><td>'+l[4]+'</td><td>'+l[5]+'</td></tr>';
   html += '</tbody></table>'; area.innerHTML = html; window.print();
 }
 

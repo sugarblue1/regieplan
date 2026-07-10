@@ -524,7 +524,7 @@ function renderRows(){
     inN.oninput = () => { it.name = inN.value; grow(); save(); }; tdN.appendChild(inN); tr.appendChild(tdN);
     const tdM = document.createElement('td'); const inM = document.createElement('input'); inM.className='min'; inM.type='number'; inM.min='0'; inM.value=it.min;
     if (it.fixStart && it.fixEnd){ inM.disabled = true; inM.title = 'Wird aus Anfang und Ende berechnet'; }
-    inM.oninput = () => { it.min = Number(inM.value)||0; save(); renderRows(); renderStatus(); renderTot(); }; tdM.appendChild(inM); tr.appendChild(tdM);
+    inM.oninput = () => { it.min = Number(inM.value)||0; save(); updateTimes(); }; tdM.appendChild(inM); tr.appendChild(tdM);
     const tdV = document.createElement('td'); const inV = document.createElement('textarea'); inV.className='video'; inV.rows=1; inV.value=it.video||''; inV.placeholder='Was läuft auf der Leinwand?';
     const growV = () => { inV.style.height='auto'; inV.style.height=(inV.scrollHeight+2)+'px'; };
     inV.oninput = () => { it.video = inV.value; growV(); save(); }; tdV.appendChild(inV); tr.appendChild(tdV);
@@ -563,6 +563,18 @@ function fillToNext(idx){
   save(); renderRows(); renderStatus(); renderTot();
 }
 function renderTot(){ const c=computed(); const h=Math.floor(c.total/60), m=c.total%60; document.getElementById('totbar').innerHTML='Gesamtlänge Programm: <b>'+c.total+' Minuten</b>'+(c.total>=60?' ('+h+' Std '+m+' Min)':''); }
+function updateTimes(){
+  const c = computed();
+  const trs = document.querySelectorAll('#rows tr');
+  c.rows.forEach((r, i) => {
+    const tr = trs[i]; if (!tr) return;
+    const s = tr.querySelector('.timeedit:not(.end)');
+    const e = tr.querySelector('.timeedit.end');
+    if (s && document.activeElement !== s) s.value = fmt(r.startM);
+    if (e && document.activeElement !== e) e.value = fmt(r.endM);
+  });
+  renderStatus(); renderTot();
+}
 function renderPresets(){
   const box = document.getElementById('presets'); box.innerHTML = '';
   state.presets.forEach((p, i) => {

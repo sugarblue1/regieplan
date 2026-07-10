@@ -43,7 +43,7 @@
   .remotehint { margin-top: 10px; padding: 8px 12px; border-radius: 8px; background: #fff5e0; color: #8a5a00; font-size: 13px; display: none; }
 
   table.plan { width: 100%; border-collapse: collapse; }
-  table.plan th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: #8a939b; padding: 6px 8px; border-bottom: 2px solid #eee; }
+  table.plan th { text-align: center; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: #8a939b; padding: 6px 8px; border-bottom: 2px solid #eee; }
   table.plan td { padding: 5px 8px; border-bottom: 1px solid #f0eee8; vertical-align: middle; }
   .timecell { font-weight: 700; font-size: 16px; white-space: nowrap; color: #0d7d8a; }
   .timecell small { display:block; font-weight:500; font-size:11px; color:#9aa3ab; }
@@ -512,6 +512,7 @@ function renderRows(){
     for (const key in ICONS){
       const ib = document.createElement('button'); const on = Array.isArray(it.icons) && it.icons.includes(key);
       ib.className = 'iconbtn' + (on ? ' on' : ''); ib.type='button'; ib.innerHTML = ICONS[key].svg; ib.title = ICONS[key].label;
+      if (on){ ib.style.color = ty.color; ib.style.background = ty.tint; ib.style.borderColor = ty.color; }
       ib.onclick = () => { if (!Array.isArray(it.icons)) it.icons = []; const ix = it.icons.indexOf(key); if (ix>=0) it.icons.splice(ix,1); else it.icons.push(key); save(); renderRows(); };
       iconRow.appendChild(ib);
     }

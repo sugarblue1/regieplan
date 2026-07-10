@@ -54,6 +54,11 @@
   .drift { font-size:11px; font-weight:700; white-space:nowrap; }
   .drift.okd { color:#1c6b3e; }
   .drift.badd { color:#a8331f; }
+  .timeedit { width:78px; font-size:16px; font-weight:700; color:#0d7d8a; border:1px solid transparent; background:transparent; border-radius:6px; padding:2px 4px; font-family:inherit; }
+  .timeedit:hover { border-color:#e0dccf; background:#faf9f6; }
+  .timeedit:focus { border-color:#007E89; background:#fff; outline:none; }
+  .timeedit.locked { background:#e3f3f4; border-color:#bfe3e6; }
+  .timesub { font-size:11px; color:#9aa3ab; margin:2px 0 0 5px; }
 
   select.type, input.name, textarea.name, textarea.video, input.min { padding: 7px 8px; border: 1px solid #d6cfc2; border-radius: 7px; font-size: 14px; background: #faf9f6; width: 100%; }
   input.min { width: 62px; text-align: center; }
@@ -455,18 +460,22 @@ function renderRows(){
     const tdB = document.createElement('td'); tdB.className = 'hcol';
     const badge = document.createElement('span'); badge.className='badge'; badge.style.background = ty.color; tdB.appendChild(badge); tr.appendChild(tdB);
     const tdT = document.createElement('td'); tdT.className='timecell';
-    const tTop = document.createElement('div'); tTop.innerHTML = fmt(r.startM)+'<small>bis '+fmt(r.endM)+'</small>'; tdT.appendChild(tTop);
+    const locked = !!(it.lock && it.lockTime);
+    const startShown = locked ? it.lockTime : fmt(r.startM);
+    const endShown = locked ? fmt(toMin(it.lockTime) + (Number(it.min)||0)) : fmt(r.endM);
+    const tMain = document.createElement('input'); tMain.className = 'timeedit' + (locked ? ' locked' : ''); tMain.type='text'; tMain.inputMode='numeric'; tMain.value = startShown;
+    tMain.title = 'Feste Uhrzeit eintragen';
+    tMain.onchange = () => { const v = parseTimeInput(tMain.value); if (v){ it.lock = true; it.lockTime = v; } save(); renderRows(); renderStatus(); };
+    tdT.appendChild(tMain);
+    const sub = document.createElement('div'); sub.className='timesub'; sub.textContent = 'bis ' + endShown; tdT.appendChild(sub);
     const lockWrap = document.createElement('div'); lockWrap.className='lockwrap';
-    const lockBtn = document.createElement('button'); lockBtn.className = 'lockbtn' + (it.lock ? ' on' : ''); lockBtn.innerHTML = it.lock ? LOCK_CLOSED : LOCK_OPEN;
-    lockBtn.title = it.lock ? 'Feste Zeit, klick zum Lösen' : 'Zeit festmachen';
+    const lockBtn = document.createElement('button'); lockBtn.className = 'lockbtn' + (locked ? ' on' : ''); lockBtn.innerHTML = locked ? LOCK_CLOSED : LOCK_OPEN;
+    lockBtn.title = locked ? 'Feste Zeit lösen' : 'Diese Zeit festmachen';
     lockBtn.onclick = () => { it.lock = !it.lock; if (it.lock && !it.lockTime) it.lockTime = fmt(r.startM); save(); renderRows(); renderStatus(); };
     lockWrap.appendChild(lockBtn);
-    if (it.lock){
-      const lt = document.createElement('input'); lt.className='locktime'; lt.type='text'; lt.inputMode='numeric'; lt.value = it.lockTime || fmt(r.startM);
-      lt.onchange = () => { const v = parseTimeInput(lt.value); if (v) it.lockTime = v; lt.value = it.lockTime; save(); renderRows(); renderStatus(); };
-      lockWrap.appendChild(lt);
-      const off = drift(r.startM, toMin(it.lockTime || fmt(r.startM)));
-      const dr = document.createElement('span'); dr.className = 'drift ' + (off===0 ? 'okd' : 'badd'); dr.textContent = off===0 ? 'sitzt' : ((off>0?'+':'')+off+' Min');
+    if (locked){
+      const off = drift(r.startM, toMin(it.lockTime));
+      const dr = document.createElement('span'); dr.className = 'drift ' + (off===0 ? 'okd' : 'badd'); dr.textContent = off===0 ? 'sitzt genau' : ('frei ' + fmt(r.startM) + ' (' + (off>0?'+':'') + off + ' Min)');
       lockWrap.appendChild(dr);
     }
     tdT.appendChild(lockWrap);
@@ -529,7 +538,7 @@ document.getElementById('earliest').onchange = e => { const v = parseTimeInput(e
 function planTable(){
   const c = computed(); const e = ev();
   const head = ['Uhrzeit','Bis','Art','Programmpunkt','Minuten','Video'];
-  const lines = c.rows.map(r => [ fmt(r.startM), fmt(r.endM), (TYPES[r.it.type]||TYPES.kuenstler).label, r.it.name||'', String(r.it.min), r.it.video||'' ]);
+  const lines = c.rows.map(r => { const lk = r.it.lock && r.it.lockTime; const st = lk ? r.it.lockTime : fmt(r.startM); const en = lk ? fmt(toMin(r.it.lockTime)+(Number(r.it.min)||0)) : fmt(r.endM); return [ st, en, (TYPES[r.it.type]||TYPES.kuenstler).label, r.it.name||'', String(r.it.min), r.it.video||'' ]; });
   return { head, lines, title: e.title, start: fmt(c.startProgram), end: fmt(c.endM) };
 }
 function copyForSheets(){

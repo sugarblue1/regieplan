@@ -47,6 +47,13 @@
   table.plan td { padding: 5px 8px; border-bottom: 1px solid #f0eee8; vertical-align: middle; }
   .timecell { font-weight: 700; font-size: 16px; white-space: nowrap; color: #0d7d8a; }
   .timecell small { display:block; font-weight:500; font-size:11px; color:#9aa3ab; }
+  .lockwrap { display:flex; align-items:center; gap:6px; margin-top:5px; }
+  .lockbtn { border:1px solid #ded8cc; background:#f7f5f0; border-radius:6px; padding:3px 6px; cursor:pointer; color:#9aa3ab; line-height:0; }
+  .lockbtn.on { background:#0d7d8a; border-color:#0d7d8a; color:#fff; }
+  .locktime { width:58px; padding:3px 5px; border:1px solid #d6cfc2; border-radius:6px; font-size:12px; text-align:center; background:#faf9f6; }
+  .drift { font-size:11px; font-weight:700; white-space:nowrap; }
+  .drift.okd { color:#1c6b3e; }
+  .drift.badd { color:#a8331f; }
 
   select.type, input.name, textarea.name, textarea.video, input.min { padding: 7px 8px; border: 1px solid #d6cfc2; border-radius: 7px; font-size: 14px; background: #faf9f6; width: 100%; }
   input.min { width: 62px; text-align: center; }
@@ -300,6 +307,8 @@ function diffStates(o, n){
       else if ((old.name||'') !== (it.name||'')) out.push(label + ': Name → „' + (it.name||'') + '“');
       if (old.type !== it.type) out.push(label + ': „' + nm + '“ Art geändert');
       if ((old.video||'') !== (it.video||'')) out.push(label + ': „' + nm + '“ Video geändert');
+      if ((old.lock?1:0) !== (it.lock?1:0)) out.push(label + ': „' + nm + '“ Zeit ' + (it.lock ? 'fixiert' : 'gelöst'));
+      else if (it.lock && (old.lockTime||'') !== (it.lockTime||'')) out.push(label + ': „' + nm + '“ feste Zeit ' + (it.lockTime||''));
     }
     const common = nIds.filter(id=>oIds.includes(id));
     const oOrder = oIds.filter(id=>common.includes(id)).join(',');
@@ -377,6 +386,9 @@ function parseTimeInput(str){
   if (h<0||h>23||m<0||m>59) return null;
   return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
 }
+const LOCK_OPEN = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 7-2.5"/></svg>';
+const LOCK_CLOSED = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+function drift(startM, lockM){ let d = (((startM%1440)+1440)%1440) - (((lockM%1440)+1440)%1440); if (d>720) d-=1440; if (d<-720) d+=1440; return d; }
 function fmt(mins){ mins = ((mins%1440)+1440)%1440; const h=Math.floor(mins/60), m=mins%60; return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0'); }
 function newId(){ return 'i'+(counter++)+'_'+Math.floor((state.events.freitag.items.length+state.events.samstag.items.length)*7+1); }
 
@@ -426,6 +438,12 @@ function renderStatus(){
     el.className = 'status ok';
     el.innerHTML = 'Passt. Du fängst vorne um <b>'+startClock+'</b> an und bist fest um <b>'+endClock+'</b> fertig. Vorne hast du noch <b>'+(windowLen-c.total)+' Minuten</b> Luft bis zum frühesten Beginn.';
   }
+  const locks = c.rows.filter(r => r.it.lock && r.it.lockTime);
+  if (locks.length){
+    const bad = locks.map(r => ({ r, off: drift(r.startM, toMin(r.it.lockTime)) })).filter(x => x.off !== 0);
+    if (!bad.length) el.innerHTML += '<div style="margin-top:8px;color:#1c6b3e">Alle festen Zeiten sitzen genau.</div>';
+    else el.innerHTML += '<div style="margin-top:8px;color:#a8331f">Feste Zeiten stimmen noch nicht: ' + bad.map(x => esc(x.r.it.name||'Punkt') + ' soll ' + x.r.it.lockTime + ', liegt bei ' + fmt(x.r.startM) + ' (' + (x.off>0?'+':'') + x.off + ' Min)').join('; ') + '</div>';
+  }
 }
 function renderRows(){
   const c = computed(); const tb = document.getElementById('rows'); tb.innerHTML = '';
@@ -436,7 +454,23 @@ function renderRows(){
     const tdH = document.createElement('td'); tdH.className = 'handle hcol'; tdH.textContent = '⠿'; tr.appendChild(tdH);
     const tdB = document.createElement('td'); tdB.className = 'hcol';
     const badge = document.createElement('span'); badge.className='badge'; badge.style.background = ty.color; tdB.appendChild(badge); tr.appendChild(tdB);
-    const tdT = document.createElement('td'); tdT.className='timecell'; tdT.innerHTML = fmt(r.startM)+'<small>bis '+fmt(r.endM)+'</small>'; tr.appendChild(tdT);
+    const tdT = document.createElement('td'); tdT.className='timecell';
+    const tTop = document.createElement('div'); tTop.innerHTML = fmt(r.startM)+'<small>bis '+fmt(r.endM)+'</small>'; tdT.appendChild(tTop);
+    const lockWrap = document.createElement('div'); lockWrap.className='lockwrap';
+    const lockBtn = document.createElement('button'); lockBtn.className = 'lockbtn' + (it.lock ? ' on' : ''); lockBtn.innerHTML = it.lock ? LOCK_CLOSED : LOCK_OPEN;
+    lockBtn.title = it.lock ? 'Feste Zeit, klick zum Lösen' : 'Zeit festmachen';
+    lockBtn.onclick = () => { it.lock = !it.lock; if (it.lock && !it.lockTime) it.lockTime = fmt(r.startM); save(); renderRows(); renderStatus(); };
+    lockWrap.appendChild(lockBtn);
+    if (it.lock){
+      const lt = document.createElement('input'); lt.className='locktime'; lt.type='text'; lt.inputMode='numeric'; lt.value = it.lockTime || fmt(r.startM);
+      lt.onchange = () => { const v = parseTimeInput(lt.value); if (v) it.lockTime = v; lt.value = it.lockTime; save(); renderRows(); renderStatus(); };
+      lockWrap.appendChild(lt);
+      const off = drift(r.startM, toMin(it.lockTime || fmt(r.startM)));
+      const dr = document.createElement('span'); dr.className = 'drift ' + (off===0 ? 'okd' : 'badd'); dr.textContent = off===0 ? 'sitzt' : ((off>0?'+':'')+off+' Min');
+      lockWrap.appendChild(dr);
+    }
+    tdT.appendChild(lockWrap);
+    tr.appendChild(tdT);
     const tdType = document.createElement('td'); const sel = document.createElement('select'); sel.className='type';
     sel.style.background = ty.tint; sel.style.fontWeight = '600';
     for (const k in TYPES){ const o=document.createElement('option'); o.value=k; o.textContent=TYPES[k].label; if(k===it.type)o.selected=true; sel.appendChild(o); }
@@ -542,6 +576,7 @@ function applyReadonly(){
   if (canEdit){ if (banner) banner.style.display = 'none'; return; }
   if (banner) banner.style.display = 'block';
   document.querySelectorAll('#app input, #app textarea, #app select').forEach(el => { el.disabled = true; });
+  document.querySelectorAll('#app .lockbtn').forEach(b => { b.disabled = true; });
   document.querySelectorAll('#addbar, .rowbtns, #presets button').forEach(el => { el.style.display = 'none'; });
   document.querySelectorAll('#rows tr').forEach(tr => { tr.draggable = false; });
 }

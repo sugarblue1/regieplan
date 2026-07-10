@@ -237,10 +237,10 @@ const TYPES = {
   videoton:    { label: 'Videoclip mit Ton',  color: '#3949AB', tint: '#CDD3F0' }
 };
 const ICONS = {
-  einhorn: { label: 'Einhorn', svg: '<span style="filter:grayscale(1);opacity:.5;font-size:14px;line-height:1">🦄</span>' },
+  einhorn: { label: 'Spendenaktion', svg: '<span style="filter:grayscale(1);opacity:.5;font-size:14px;line-height:1">🦄</span>' },
   band: { label: 'Band', svg: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="18" r="2.6"/><circle cx="17" cy="16" r="2.6"/><path d="M8.6 18V5.5L19.6 3.6V16"/><path d="M8.6 9.2l11-1.9"/></svg>' },
-  blaster: { label: 'Gettoblaster', svg: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="7.5" width="19" height="12" rx="1.8"/><path d="M6.5 7.5V5.6a1.8 1.8 0 0 1 1.8-1.8h7.4a1.8 1.8 0 0 1 1.8 1.8v1.9"/><circle cx="8" cy="13.5" r="2.4"/><circle cx="16" cy="13.5" r="2.4"/></svg>' },
-  micro: { label: 'Mikro', svg: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5.5 10.5a6.5 6.5 0 0 0 13 0"/><line x1="12" y1="17" x2="12" y2="21.5"/><line x1="8.5" y1="21.5" x2="15.5" y2="21.5"/></svg>' }
+  blaster: { label: 'Halbplayback', svg: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="7.5" width="19" height="12" rx="1.8"/><path d="M6.5 7.5V5.6a1.8 1.8 0 0 1 1.8-1.8h7.4a1.8 1.8 0 0 1 1.8 1.8v1.9"/><circle cx="8" cy="13.5" r="2.4"/><circle cx="16" cy="13.5" r="2.4"/></svg>' },
+  micro: { label: 'Moderation', svg: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5.5 10.5a6.5 6.5 0 0 0 13 0"/><line x1="12" y1="17" x2="12" y2="21.5"/><line x1="8.5" y1="21.5" x2="15.5" y2="21.5"/></svg>' }
 };
 
 /* ====== Startwerte, falls die Datenbank noch leer ist (ohne Programm, das liegt geschützt in der Datenbank) ====== */
@@ -331,8 +331,8 @@ function diffStates(o, n){
       else if ((old.name||'') !== (it.name||'')) out.push(label + ': Name → „' + (it.name||'') + '“');
       if (old.type !== it.type) out.push(label + ': „' + nm + '“ Art geändert');
       if ((old.video||'') !== (it.video||'')) out.push(label + ': „' + nm + '“ Video geändert');
-      if ((old.lock?1:0) !== (it.lock?1:0)) out.push(label + ': „' + nm + '“ Zeit ' + (it.lock ? 'fixiert' : 'gelöst'));
-      else if (it.lock && (old.lockTime||'') !== (it.lockTime||'')) out.push(label + ': „' + nm + '“ feste Zeit ' + (it.lockTime||''));
+      if ((old.fixStart||'') !== (it.fixStart||'')) out.push(label + ': „' + nm + '“ Startzeit ' + (it.fixStart ? ('fest ' + it.fixStart) : 'gelöst'));
+      if ((old.fixEnd||'') !== (it.fixEnd||'')) out.push(label + ': „' + nm + '“ Endzeit ' + (it.fixEnd ? ('fest ' + it.fixEnd) : 'gelöst'));
     }
     const common = nIds.filter(id=>oIds.includes(id));
     const oOrder = oIds.filter(id=>common.includes(id)).join(',');
@@ -424,11 +424,13 @@ function computed(){
   let clock = startProgram;
   const rows = e.items.map(it => {
     const m = Number(it.min)||0;
+    const fs = it.fixStart ? toMin(it.fixStart) : null;
+    const fe = it.fixEnd ? toMin(it.fixEnd) : null;
     let start, end;
-    if (it.lock && it.lockTime){
-      if (it.lockMode === 'end'){ end = toMin(it.lockTime); start = end - m; }
-      else { start = toMin(it.lockTime); end = start + m; }
-    } else { start = clock; end = start + m; }
+    if (fs!=null && fe!=null){ start = fs; end = fe; if (end < start) end += 1440; }
+    else if (fs!=null){ start = fs; end = fs + m; }
+    else if (fe!=null){ end = fe; start = fe - m; }
+    else { start = clock; end = start + m; }
     clock = end;
     return { it, startM: start, endM: end };
   });
@@ -436,6 +438,7 @@ function computed(){
   const lastEnd = rows.length ? rows[rows.length-1].endM : endM;
   return { total, endM, startProgram, rows, firstStart, lastEnd };
 }
+function syncMin(it){ if (it.fixStart && it.fixEnd){ let d = toMin(it.fixEnd) - toMin(it.fixStart); if (d < 0) d += 1440; it.min = d; } }
 
 /* ====== Anzeige ====== */
 function renderTabs(){
@@ -482,19 +485,17 @@ function renderRows(){
     const tr = document.createElement('tr'); tr.draggable = true; tr.dataset.idx = idx;
     const tdH = document.createElement('td'); tdH.className = 'handle hcol'; tdH.textContent = '⠿'; tr.appendChild(tdH);
     const tdT = document.createElement('td'); tdT.className='timecell';
-    const locked = !!(it.lock && it.lockTime);
-    const startLocked = locked && it.lockMode !== 'end';
-    const endLocked = locked && it.lockMode === 'end';
+    const hasFix = !!(it.fixStart || it.fixEnd);
     const trow = document.createElement('div'); trow.className='trow';
-    const tStart = document.createElement('input'); tStart.className = 'timeedit' + (startLocked ? ' locked' : ''); tStart.type='text'; tStart.inputMode='numeric'; tStart.value = fmt(r.startM); tStart.title = 'Startzeit festmachen';
-    tStart.onchange = () => { const v = parseTimeInput(tStart.value); if (v){ it.lock = true; it.lockMode = 'start'; it.lockTime = v; } save(); renderRows(); renderStatus(); };
-    const lockBtn = document.createElement('button'); lockBtn.className = 'lockbtn' + (locked ? ' on' : ''); lockBtn.innerHTML = locked ? LOCK_CLOSED : LOCK_OPEN;
-    lockBtn.title = locked ? 'Feste Zeit lösen' : 'Startzeit festmachen';
-    lockBtn.onclick = () => { it.lock = !it.lock; if (it.lock && !it.lockTime){ it.lockMode = 'start'; it.lockTime = fmt(r.startM); } save(); renderRows(); renderStatus(); };
+    const tStart = document.createElement('input'); tStart.className = 'timeedit' + (it.fixStart ? ' locked' : ''); tStart.type='text'; tStart.inputMode='numeric'; tStart.value = fmt(r.startM); tStart.title = 'Startzeit festmachen';
+    tStart.onchange = () => { const v = parseTimeInput(tStart.value); it.fixStart = v || undefined; syncMin(it); save(); renderRows(); renderStatus(); renderTot(); };
+    const lockBtn = document.createElement('button'); lockBtn.className = 'lockbtn' + (hasFix ? ' on' : ''); lockBtn.innerHTML = hasFix ? LOCK_CLOSED : LOCK_OPEN;
+    lockBtn.title = hasFix ? 'Feste Zeiten lösen' : 'Startzeit festmachen';
+    lockBtn.onclick = () => { if (hasFix){ it.fixStart = undefined; it.fixEnd = undefined; } else { it.fixStart = fmt(r.startM); } syncMin(it); save(); renderRows(); renderStatus(); renderTot(); };
     trow.appendChild(tStart); trow.appendChild(lockBtn); tdT.appendChild(trow);
     const sub = document.createElement('div'); sub.className='timesub'; sub.appendChild(document.createTextNode('bis '));
-    const tEnd = document.createElement('input'); tEnd.className = 'timeedit end' + (endLocked ? ' locked' : ''); tEnd.type='text'; tEnd.inputMode='numeric'; tEnd.value = fmt(r.endM); tEnd.title = 'Endzeit festmachen';
-    tEnd.onchange = () => { const v = parseTimeInput(tEnd.value); if (v){ it.lock = true; it.lockMode = 'end'; it.lockTime = v; } save(); renderRows(); renderStatus(); };
+    const tEnd = document.createElement('input'); tEnd.className = 'timeedit end' + (it.fixEnd ? ' locked' : ''); tEnd.type='text'; tEnd.inputMode='numeric'; tEnd.value = fmt(r.endM); tEnd.title = 'Endzeit festmachen';
+    tEnd.onchange = () => { const v = parseTimeInput(tEnd.value); it.fixEnd = v || undefined; syncMin(it); save(); renderRows(); renderStatus(); renderTot(); };
     sub.appendChild(tEnd); tdT.appendChild(sub);
     tr.appendChild(tdT);
     const tdType = document.createElement('td'); const sel = document.createElement('select'); sel.className='type';
@@ -522,6 +523,7 @@ function renderRows(){
     const grow = () => { inN.style.height='auto'; inN.style.height=(inN.scrollHeight+2)+'px'; };
     inN.oninput = () => { it.name = inN.value; grow(); save(); }; tdN.appendChild(inN); tr.appendChild(tdN);
     const tdM = document.createElement('td'); const inM = document.createElement('input'); inM.className='min'; inM.type='number'; inM.min='0'; inM.value=it.min;
+    if (it.fixStart && it.fixEnd){ inM.disabled = true; inM.title = 'Wird aus Anfang und Ende berechnet'; }
     inM.oninput = () => { it.min = Number(inM.value)||0; save(); renderRows(); renderStatus(); renderTot(); }; tdM.appendChild(inM); tr.appendChild(tdM);
     const tdV = document.createElement('td'); const inV = document.createElement('textarea'); inV.className='video'; inV.rows=1; inV.value=it.video||''; inV.placeholder='Was läuft auf der Leinwand?';
     const growV = () => { inV.style.height='auto'; inV.style.height=(inV.scrollHeight+2)+'px'; };
@@ -549,7 +551,7 @@ function fillToNext(idx){
   const c = computed();
   const startM = c.rows[idx].startM;
   let j = -1;
-  for (let k=idx+1; k<items.length; k++){ if (items[k].lock && items[k].lockTime){ j = k; break; } }
+  for (let k=idx+1; k<items.length; k++){ if (items[k].fixStart || items[k].fixEnd){ j = k; break; } }
   let target, between = 0;
   if (j >= 0){ target = c.rows[j].startM; for (let k=idx+1; k<j; k++) between += (Number(items[k].min)||0); }
   else { target = toMin(ev().endTime); for (let k=idx+1; k<items.length; k++) between += (Number(items[k].min)||0); }

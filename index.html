@@ -60,6 +60,7 @@
   .timeedit.locked { background:#e3f3f4; border-color:#bfe3e6; }
   .timesub { font-size:11px; color:#9aa3ab; margin:2px 0 0 5px; display:flex; align-items:center; gap:3px; }
   .timeedit.end { width:62px; font-size:13px; font-weight:600; color:#6b7680; }
+  .trow { display:flex; align-items:center; gap:5px; }
   select.type { width: 150px; }
   .stage { display:flex; flex-direction:row; align-items:center; gap:8px; }
   .stage input.people { width:46px; padding:6px 6px; border:1px solid #d6cfc2; border-radius:6px; font-size:13px; text-align:center; background:#faf9f6; }
@@ -175,7 +176,7 @@
     <div class="card">
       <h2>Programm</h2>
       <table class="plan">
-        <thead><tr><th class="hcol"></th><th class="hcol"></th><th>Uhrzeit</th><th>Art</th><th title="Anzahl der Leute auf der Bühne und passende Symbole">Bühne</th><th>Programmpunkt</th><th>Minuten</th><th>Video</th><th></th></tr></thead>
+        <thead><tr><th class="hcol"></th><th>Uhrzeit</th><th>Art</th><th title="Anzahl der Leute auf der Bühne und passende Symbole">Bühne</th><th>Programmpunkt</th><th>Minuten</th><th>Video</th><th></th></tr></thead>
         <tbody id="rows"></tbody>
       </table>
       <div class="addbar" id="addbar">
@@ -480,25 +481,21 @@ function renderRows(){
     const ty = TYPES[it.type] || TYPES.kuenstler;
     const tr = document.createElement('tr'); tr.draggable = true; tr.dataset.idx = idx;
     const tdH = document.createElement('td'); tdH.className = 'handle hcol'; tdH.textContent = '⠿'; tr.appendChild(tdH);
-    const tdB = document.createElement('td'); tdB.className = 'hcol';
-    const badge = document.createElement('span'); badge.className='badge'; badge.style.background = ty.color; tdB.appendChild(badge); tr.appendChild(tdB);
     const tdT = document.createElement('td'); tdT.className='timecell';
     const locked = !!(it.lock && it.lockTime);
     const startLocked = locked && it.lockMode !== 'end';
     const endLocked = locked && it.lockMode === 'end';
+    const trow = document.createElement('div'); trow.className='trow';
     const tStart = document.createElement('input'); tStart.className = 'timeedit' + (startLocked ? ' locked' : ''); tStart.type='text'; tStart.inputMode='numeric'; tStart.value = fmt(r.startM); tStart.title = 'Startzeit festmachen';
     tStart.onchange = () => { const v = parseTimeInput(tStart.value); if (v){ it.lock = true; it.lockMode = 'start'; it.lockTime = v; } save(); renderRows(); renderStatus(); };
-    tdT.appendChild(tStart);
+    const lockBtn = document.createElement('button'); lockBtn.className = 'lockbtn' + (locked ? ' on' : ''); lockBtn.innerHTML = locked ? LOCK_CLOSED : LOCK_OPEN;
+    lockBtn.title = locked ? 'Feste Zeit lösen' : 'Startzeit festmachen';
+    lockBtn.onclick = () => { it.lock = !it.lock; if (it.lock && !it.lockTime){ it.lockMode = 'start'; it.lockTime = fmt(r.startM); } save(); renderRows(); renderStatus(); };
+    trow.appendChild(tStart); trow.appendChild(lockBtn); tdT.appendChild(trow);
     const sub = document.createElement('div'); sub.className='timesub'; sub.appendChild(document.createTextNode('bis '));
     const tEnd = document.createElement('input'); tEnd.className = 'timeedit end' + (endLocked ? ' locked' : ''); tEnd.type='text'; tEnd.inputMode='numeric'; tEnd.value = fmt(r.endM); tEnd.title = 'Endzeit festmachen';
     tEnd.onchange = () => { const v = parseTimeInput(tEnd.value); if (v){ it.lock = true; it.lockMode = 'end'; it.lockTime = v; } save(); renderRows(); renderStatus(); };
     sub.appendChild(tEnd); tdT.appendChild(sub);
-    const lockWrap = document.createElement('div'); lockWrap.className='lockwrap';
-    const lockBtn = document.createElement('button'); lockBtn.className = 'lockbtn' + (locked ? ' on' : ''); lockBtn.innerHTML = locked ? LOCK_CLOSED : LOCK_OPEN;
-    lockBtn.title = locked ? 'Feste Zeit lösen' : 'Startzeit festmachen';
-    lockBtn.onclick = () => { it.lock = !it.lock; if (it.lock && !it.lockTime){ it.lockMode = 'start'; it.lockTime = fmt(r.startM); } save(); renderRows(); renderStatus(); };
-    lockWrap.appendChild(lockBtn);
-    tdT.appendChild(lockWrap);
     tr.appendChild(tdT);
     const tdType = document.createElement('td'); const sel = document.createElement('select'); sel.className='type';
     sel.style.background = ty.tint; sel.style.fontWeight = '600';

@@ -65,6 +65,7 @@
   .iconrow { display:flex; gap:4px; flex-wrap:wrap; }
   .iconbtn { width:28px; height:28px; display:flex; align-items:center; justify-content:center; border:1px solid #ded8cc; background:#f7f5f0; border-radius:6px; cursor:pointer; color:#b3bac1; padding:0; }
   .iconbtn.on { color:#23303a; background:#e6e2d9; border-color:#c7c0b2; }
+  .rowbtns button { display:inline-flex; align-items:center; justify-content:center; }
 
   select.type, input.name, textarea.name, textarea.video, input.min { padding: 7px 8px; border: 1px solid #d6cfc2; border-radius: 7px; font-size: 14px; background: #faf9f6; width: 100%; }
   input.min { width: 62px; text-align: center; }
@@ -514,8 +515,11 @@ function renderRows(){
     const growV = () => { inV.style.height='auto'; inV.style.height=(inV.scrollHeight+2)+'px'; };
     inV.oninput = () => { it.video = inV.value; growV(); save(); }; tdV.appendChild(inV); tr.appendChild(tdV);
     const tdBt = document.createElement('td'); const wrap = document.createElement('div'); wrap.className='rowbtns';
+    const stretch = document.createElement('button'); stretch.className='stretchbtn'; stretch.type='button'; stretch.title='Länge bis zum nächsten Fixpunkt (oder Ende) strecken';
+    stretch.innerHTML = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v16"/><path d="M8 8l4-4 4 4"/><path d="M8 16l4 4 4-4"/></svg>';
+    stretch.onclick = () => fillToNext(idx);
     const del = btn('✕', () => { ev().items.splice(idx,1); save(); renderRows(); renderStatus(); renderTot(); }); del.className='del';
-    wrap.append(del); tdBt.appendChild(wrap); tr.appendChild(tdBt);
+    wrap.append(stretch, del); tdBt.appendChild(wrap); tr.appendChild(tdBt);
     tr.addEventListener('dragstart', () => { dragFrom = idx; tr.classList.add('dragging'); });
     tr.addEventListener('dragend', () => tr.classList.remove('dragging'));
     tr.addEventListener('dragover', e => e.preventDefault());
@@ -528,6 +532,22 @@ function btn(txt, fn){ const b=document.createElement('button'); b.textContent=t
 let dragFrom = null;
 function dropOn(to){ if (dragFrom===null||dragFrom===to) return; const a=ev().items; const [m]=a.splice(dragFrom,1); a.splice(to,0,m); dragFrom=null; save(); renderRows(); renderStatus(); renderTot(); }
 function move(idx, dir){ const a=ev().items; const to=idx+dir; if(to<0||to>=a.length) return; [a[idx],a[to]]=[a[to],a[idx]]; save(); renderRows(); renderStatus(); renderTot(); }
+function fillToNext(idx){
+  const items = ev().items;
+  const c = computed();
+  const startM = c.rows[idx].startM;
+  let j = -1;
+  for (let k=idx+1; k<items.length; k++){ if (items[k].lock && items[k].lockTime){ j = k; break; } }
+  let target, between = 0;
+  if (j >= 0){ target = toMin(items[j].lockTime); for (let k=idx+1; k<j; k++) between += (Number(items[k].min)||0); }
+  else { target = toMin(ev().endTime); for (let k=idx+1; k<items.length; k++) between += (Number(items[k].min)||0); }
+  const s = ((startM % 1440) + 1440) % 1440;
+  let targetAbs = target; if (targetAbs <= s) targetAbs += 1440;
+  const newDur = targetAbs - s - between;
+  if (newDur < 0) return;
+  items[idx].min = Math.round(newDur);
+  save(); renderRows(); renderStatus(); renderTot();
+}
 function renderTot(){ const c=computed(); const h=Math.floor(c.total/60), m=c.total%60; document.getElementById('totbar').innerHTML='Gesamtlänge Programm: <b>'+c.total+' Minuten</b>'+(c.total>=60?' ('+h+' Std '+m+' Min)':''); }
 function renderPresets(){
   const box = document.getElementById('presets'); box.innerHTML = '';

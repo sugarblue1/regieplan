@@ -60,8 +60,9 @@
   .timeedit.locked { background:#e3f3f4; border-color:#bfe3e6; }
   .timesub { font-size:11px; color:#9aa3ab; margin:2px 0 0 5px; display:flex; align-items:center; gap:3px; }
   .timeedit.end { width:62px; font-size:13px; font-weight:600; color:#6b7680; }
-  .timecell { display:flex; align-items:center; gap:7px; }
+  .timecell { display:flex; align-items:center; gap:7px; min-width:175px; }
   .timeblock { display:flex; flex-direction:column; }
+  .tablescroll { overflow-x: auto; }
   select.type { width: 150px; }
   .stage { display:flex; flex-direction:row; align-items:center; gap:8px; }
   .stage input.people { width:46px; padding:6px 6px; border:1px solid #d6cfc2; border-radius:6px; font-size:13px; text-align:center; background:#faf9f6; }
@@ -77,7 +78,7 @@
   select.type, input.name, textarea.name, textarea.video, input.min { padding: 7px 8px; border: 1px solid #d6cfc2; border-radius: 7px; font-size: 14px; background: #faf9f6; width: 100%; }
   input.min { width: 62px; text-align: center; }
   .name { width: 100%; min-width: 340px; }
-  .video { width: 100%; min-width: 240px; }
+  .video { width: 175px; min-width: 175px; }
   textarea.name, textarea.video { resize: vertical; line-height: 1.4; min-height: 36px; font-family: inherit; overflow: hidden; }
 
   .badge { width: 11px; height: 34px; border-radius: 4px; display: inline-block; }
@@ -178,10 +179,12 @@
 
     <div class="card">
       <h2>Programm</h2>
+      <div class="tablescroll">
       <table class="plan">
-        <thead><tr><th class="hcol"></th><th>Uhrzeit</th><th>Art</th><th title="Anzahl der Leute auf der Bühne und passende Symbole">Bühne</th><th>Programmpunkt</th><th>Minuten</th><th>Video</th><th></th></tr></thead>
+        <thead><tr><th class="hcol"></th><th>Uhrzeit</th><th>Art</th><th title="Anzahl der Leute auf der Bühne und passende Symbole">Bühne</th><th>Programmpunkt</th><th>Minuten</th><th></th><th>Video</th><th>Infos</th></tr></thead>
         <tbody id="rows"></tbody>
       </table>
+      </div>
       <div class="addbar" id="addbar">
         <button style="background:#E84B8A" onclick="addItem('kuenstler')">+ Artist</button>
         <button style="background:#8E6FD0" onclick="addItem('sosa')">+ SOSA</button>
@@ -528,21 +531,24 @@ function renderRows(){
     const tdM = document.createElement('td'); const inM = document.createElement('input'); inM.className='min'; inM.type='number'; inM.min='0'; inM.value=it.min;
     if (it.fixStart && it.fixEnd){ inM.disabled = true; inM.title = 'Wird aus Anfang und Ende berechnet'; }
     inM.oninput = () => { it.min = Number(inM.value)||0; save(); updateTimes(); }; tdM.appendChild(inM); tr.appendChild(tdM);
-    const tdV = document.createElement('td'); const inV = document.createElement('textarea'); inV.className='video'; inV.rows=1; inV.value=it.video||''; inV.placeholder='Was läuft auf der Leinwand?';
-    const growV = () => { inV.style.height='auto'; inV.style.height=(inV.scrollHeight+2)+'px'; };
-    inV.oninput = () => { it.video = inV.value; growV(); save(); }; tdV.appendChild(inV); tr.appendChild(tdV);
     const tdBt = document.createElement('td'); const wrap = document.createElement('div'); wrap.className='rowbtns';
     const stretch = document.createElement('button'); stretch.className='stretchbtn hastip'; stretch.type='button'; stretch.dataset.tip='Länge bis zum nächsten Fixpunkt strecken';
     stretch.innerHTML = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v16"/><path d="M8 8l4-4 4 4"/><path d="M8 16l4 4 4-4"/></svg>';
     stretch.onclick = () => fillToNext(idx);
     const del = btn('✕', () => { ev().items.splice(idx,1); save(); renderRows(); renderStatus(); renderTot(); }); del.className='del';
     wrap.append(stretch, del); tdBt.appendChild(wrap); tr.appendChild(tdBt);
+    const tdV = document.createElement('td'); const inV = document.createElement('textarea'); inV.className='video'; inV.rows=1; inV.value=it.video||''; inV.placeholder='Was läuft auf der Leinwand?';
+    const growV = () => { inV.style.height='auto'; inV.style.height=(inV.scrollHeight+2)+'px'; };
+    inV.oninput = () => { it.video = inV.value; growV(); save(); }; tdV.appendChild(inV); tr.appendChild(tdV);
+    const tdI = document.createElement('td'); const inI = document.createElement('textarea'); inI.className='video'; inI.rows=1; inI.value=it.info||''; inI.placeholder='Sonstige Informationen';
+    const growI = () => { inI.style.height='auto'; inI.style.height=(inI.scrollHeight+2)+'px'; };
+    inI.oninput = () => { it.info = inI.value; growI(); save(); }; tdI.appendChild(inI); tr.appendChild(tdI);
     tr.addEventListener('dragstart', () => { dragFrom = idx; tr.classList.add('dragging'); });
     tr.addEventListener('dragend', () => tr.classList.remove('dragging'));
     tr.addEventListener('dragover', e => e.preventDefault());
     tr.addEventListener('drop', e => { e.preventDefault(); dropOn(idx); });
     tb.appendChild(tr);
-    grow(); growV();
+    grow(); growV(); growI();
   });
 }
 function btn(txt, fn){ const b=document.createElement('button'); b.textContent=txt; b.onclick=fn; return b; }
@@ -606,8 +612,8 @@ document.getElementById('earliest').onchange = e => { const v = parseTimeInput(e
 /* ====== Export ====== */
 function planTable(){
   const c = computed(); const e = ev();
-  const head = ['Uhrzeit','Bis','Art','Bühne','Programmpunkt','Minuten','Video'];
-  const lines = c.rows.map(r => { const st = ((r.it.people!=null?r.it.people+' Pers':'') + (Array.isArray(r.it.icons)&&r.it.icons.length?' '+r.it.icons.map(k=>(ICONS[k]?ICONS[k].label:k)).join('/'):'')).trim(); return [ fmt(r.startM), fmt(r.endM), (TYPES[r.it.type]||TYPES.kuenstler).label, st, r.it.name||'', String(r.it.min), r.it.video||'' ]; });
+  const head = ['Uhrzeit','Bis','Art','Bühne','Programmpunkt','Minuten','Video','Infos'];
+  const lines = c.rows.map(r => { const st = ((r.it.people!=null?r.it.people+' Pers':'') + (Array.isArray(r.it.icons)&&r.it.icons.length?' '+r.it.icons.map(k=>(ICONS[k]?ICONS[k].label:k)).join('/'):'')).trim(); return [ fmt(r.startM), fmt(r.endM), (TYPES[r.it.type]||TYPES.kuenstler).label, st, r.it.name||'', String(r.it.min), r.it.video||'', r.it.info||'' ]; });
   return { head, lines, title: e.title, start: fmt(c.firstStart), end: fmt(c.lastEnd) };
 }
 function copyForSheets(){

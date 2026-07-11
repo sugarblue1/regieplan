@@ -62,7 +62,9 @@
   .timeedit.end { width:62px; font-size:13px; font-weight:600; color:#6b7680; }
   .timecell { min-width:175px; }
   .timeblock { display:flex; flex-direction:column; gap:3px; }
-  .trow2 { display:flex; align-items:center; gap:5px; }
+  .trow2 { display:flex; align-items:center; gap:6px; }
+  .tcell { width:92px; display:flex; align-items:center; gap:4px; }
+  .bislbl { font-size:11px; color:#9aa3ab; }
   .gaprow td { background:#fff5e0; color:#8a5a00; font-size:12px; font-weight:600; padding:5px 12px; border-bottom:1px solid #f0eee8; }
   .gapclose { margin-left:8px; border:1px solid #e6c98a; background:#fff; color:#8a5a00; border-radius:6px; padding:2px 9px; font-size:11px; font-weight:700; cursor:pointer; }
   .tablescroll { overflow-x: auto; }
@@ -161,8 +163,7 @@
     <span class="logout" onclick="doLogout()">Abmelden</span>
     <span class="logout" id="whoami" onclick="changeName()" style="margin-right:16px"></span>
     <h1>Regieplan</h1>
-    <p>Gemeinsamer Plan. Was du änderst, sehen alle anderen sofort. Die Zeiten rechnen sich vom Ende her nach vorne.</p>
-    <div class="live" id="live">verbunden</div>
+    <p>Gemeinsamer Plan. Was du änderst, sehen alle anderen sofort.</p>
   </header>
 
   <div class="wrap">
@@ -382,9 +383,7 @@ function subscribeRealtime(){
       if (!row || row.client === myClient) return;
       handleRemote(row.data);
     })
-    .subscribe(status => {
-      document.getElementById('live').textContent = (status === 'SUBSCRIBED') ? 'verbunden, Änderungen erscheinen live' : 'verbunden';
-    });
+    .subscribe(status => { const l = document.getElementById('live'); if (l) l.textContent = (status === 'SUBSCRIBED') ? 'verbunden' : ''; });
 }
 function isEditing(){
   const el = document.activeElement;
@@ -503,13 +502,17 @@ function renderRows(){
     tStart.onchange = () => { const v = parseTimeInput(tStart.value); it.fixStart = v || undefined; syncMin(it); save(); renderRows(); renderStatus(); renderTot(); };
     const lockS = document.createElement('button'); lockS.className = 'lockbtn hastip' + (it.fixStart ? ' on' : ''); lockS.innerHTML = it.fixStart ? LOCK_CLOSED : LOCK_OPEN; lockS.dataset.tip = it.fixStart ? 'Startzeit lösen' : 'Startzeit einloggen';
     lockS.onclick = () => { it.fixStart = it.fixStart ? undefined : fmt(r.startM); syncMin(it); save(); renderRows(); renderStatus(); renderTot(); };
-    r1.append(tStart, lockS); block.appendChild(r1);
-    const r2 = document.createElement('div'); r2.className='timesub'; r2.appendChild(document.createTextNode('bis '));
+    const c1 = document.createElement('div'); c1.className='tcell'; c1.appendChild(tStart);
+    r1.append(c1, lockS); block.appendChild(r1);
+    const r2 = document.createElement('div'); r2.className='trow2';
+    const c2 = document.createElement('div'); c2.className='tcell';
+    const bislbl = document.createElement('span'); bislbl.className='bislbl'; bislbl.textContent='bis';
     const tEnd = document.createElement('input'); tEnd.className = 'timeedit end' + (it.fixEnd ? ' locked' : ''); tEnd.type='text'; tEnd.inputMode='numeric'; tEnd.value = fmt(r.endM);
     tEnd.onchange = () => { const v = parseTimeInput(tEnd.value); it.fixEnd = v || undefined; syncMin(it); save(); renderRows(); renderStatus(); renderTot(); };
+    c2.append(bislbl, tEnd);
     const lockE = document.createElement('button'); lockE.className = 'lockbtn hastip' + (it.fixEnd ? ' on' : ''); lockE.innerHTML = it.fixEnd ? LOCK_CLOSED : LOCK_OPEN; lockE.dataset.tip = it.fixEnd ? 'Endzeit lösen' : 'Endzeit einloggen';
     lockE.onclick = () => { it.fixEnd = it.fixEnd ? undefined : fmt(r.endM); syncMin(it); save(); renderRows(); renderStatus(); renderTot(); };
-    r2.append(tEnd, lockE); block.appendChild(r2);
+    r2.append(c2, lockE); block.appendChild(r2);
     tdT.appendChild(block);
     tr.appendChild(tdT);
     const tdType = document.createElement('td'); const sel = document.createElement('select'); sel.className='type';

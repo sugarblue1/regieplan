@@ -72,8 +72,8 @@
   .trow2 { display:flex; align-items:center; gap:6px; }
   .tcell { width:92px; display:flex; align-items:center; gap:4px; }
   .bislbl { font-size:11px; color:#9aa3ab; }
-  .gaprow td { background:#fff5e0; color:#8a5a00; font-size:12px; font-weight:600; padding:5px 12px; border-bottom:1px solid #f0eee8; }
-  .gapclose { margin-left:8px; border:1px solid #e6c98a; background:#fff; color:#8a5a00; border-radius:6px; padding:2px 9px; font-size:11px; font-weight:700; cursor:pointer; }
+  .gaprow td { background:#fbe7e4; color:#a8331f; font-size:12px; font-weight:600; padding:5px 12px; border-bottom:1px solid #f0eee8; }
+  .gapclose { margin-left:8px; border:1px solid #e0a6a0; background:#fff; color:#a8331f; border-radius:6px; padding:2px 9px; font-size:11px; font-weight:700; cursor:pointer; }
   .overlaprow td { background:#fbe7e4; color:#a8331f; font-size:12px; font-weight:600; padding:5px 12px; border-bottom:1px solid #f0eee8; }
   .ovbtn { border-color:#e0a6a0; color:#a8331f; }
   .ovarrow { margin-left:6px; border:1px solid #e0a6a0; background:#fff; color:#a8331f; border-radius:6px; padding:1px 9px; font-size:14px; font-weight:700; cursor:pointer; }
@@ -89,7 +89,7 @@
   .iconbtn.on { color:#23303a; background:#e6e2d9; border-color:#c7c0b2; }
   .rowbtns button { display:inline-flex; align-items:center; justify-content:center; }
   .hastip { position: relative; }
-  .hastip:hover::after { content: attr(data-tip); position:absolute; bottom:calc(100% + 6px); left:50%; transform:translateX(-50%); background:#23303a; color:#fff; font-size:11px; font-weight:600; white-space:nowrap; padding:4px 8px; border-radius:6px; z-index:30; pointer-events:none; box-shadow:0 2px 6px rgba(0,0,0,.25); }
+  .hastip:hover::after { content: attr(data-tip); position:absolute; top:calc(100% + 6px); left:50%; transform:translateX(-50%); background:#23303a; color:#fff; font-size:11px; font-weight:600; white-space:nowrap; padding:4px 8px; border-radius:6px; z-index:30; pointer-events:none; box-shadow:0 2px 6px rgba(0,0,0,.25); }
 
   select.type, input.name, textarea.name, textarea.video, input.min { padding: 7px 8px; border: 1px solid #d6cfc2; border-radius: 7px; font-size: 14px; background: #faf9f6; width: 100%; }
   input.min { width: 62px; text-align: center; }
@@ -111,6 +111,7 @@
   .addbar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
   .addbar button { padding: 9px 14px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; background: #0d7d8a; color: #fff; }
   .addbar button.ghost { background: #eee7da; color: #5b6670; }
+  #undoBtn:disabled { opacity: .4; cursor: default; }
 
   .presets { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
   .preset { display: flex; align-items: flex-end; gap: 6px; background: #faf7f1; border: 1px solid #e6dfd0; padding: 8px 10px; border-radius: 9px; }
@@ -203,6 +204,7 @@
       </table>
       </div>
       <div class="addbar" id="addbar">
+        <button id="undoBtn" class="ghost" onclick="undo()" disabled>↶ Rückgängig</button>
         <button style="background:#E84B8A" onclick="addItem('kuenstler')">+ Artist</button>
         <button style="background:#8E6FD0" onclick="addItem('sosa')">+ SOSA</button>
         <button style="background:#3FB873" onclick="addItem('redebeitrag')">+ Redebeitrag</button>
@@ -221,7 +223,7 @@
     </div>
 
     <div class="card" id="logcard">
-      <h2 id="logtoggle" style="cursor:pointer;user-select:none">Änderungen — wer hat was gemacht <span id="logarrow" style="font-size:12px;font-weight:600;color:#8a939b">▸ aufklappen</span><button class="logclear" onclick="event.stopPropagation(); clearLog();">Liste leeren</button></h2>
+      <h2 id="logtoggle" style="cursor:pointer;user-select:none">Änderungen — wer hat was gemacht <span id="logarrow" style="font-size:12px;font-weight:600;color:#8a939b">▸ aufklappen</span><button id="logclear" class="logclear" onclick="event.stopPropagation(); clearLog();">Liste leeren</button></h2>
       <div id="logbox" class="loglist" style="display:none"></div>
     </div>
 
@@ -370,6 +372,7 @@ function diffStates(o, n){
 }
 
 let saveTimer = null;
+let undoStack = [];
 function save(){
   if (!canEdit) return;
   clearTimeout(saveTimer);
@@ -379,16 +382,25 @@ async function pushToDb(){
   const cur = { presets: state.presets, events: state.events };
   const changes = snap ? diffStates(snap, cur) : [];
   if (changes.length){
+    if (snap){ undoStack.push(JSON.parse(JSON.stringify(snap))); if (undoStack.length > 40) undoStack.shift(); }
     state.log = [{ who: myName || 'Jemand', at: new Date().toISOString(), detail: changes.join(' · ') }, ...(state.log || [])].slice(0, 60);
     renderLog();
   }
-  setSnap();
+  setSnap(); updateUndo();
   await supa.from('regieplan_state').upsert({
     id: 1,
     data: { presets: state.presets, events: state.events, log: state.log },
     client: myClient,
     updated_at: new Date().toISOString()
   });
+}
+function updateUndo(){ const b = document.getElementById('undoBtn'); if (b) b.disabled = !undoStack.length; }
+async function undo(){
+  if (!undoStack.length) return;
+  const prev = undoStack.pop();
+  state.presets = prev.presets; state.events = prev.events;
+  setSnap(); updateUndo(); renderAll();
+  await supa.from('regieplan_state').upsert({ id:1, data:{ presets: state.presets, events: state.events, log: state.log }, client: myClient, updated_at: new Date().toISOString() });
 }
 
 /* ====== Live Aktualisierung von anderen ====== */
@@ -441,6 +453,7 @@ function drift(startM, lockM){ let d = (((startM%1440)+1440)%1440) - (((lockM%14
 function fmt(mins){ mins = ((mins%1440)+1440)%1440; const h=Math.floor(mins/60), m=mins%60; return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0'); }
 function newId(){ return 'i'+(counter++)+'_'+Math.floor((state.events.freitag.items.length+state.events.samstag.items.length)*7+1); }
 
+function nearCycle(v, ref){ let d = ((v - ref) % 1440 + 1440) % 1440; if (d > 720) d -= 1440; return ref + d; }
 function computed(){
   const e = ev();
   const total = e.items.reduce((s,it)=> s + (Number(it.min)||0), 0);
@@ -449,8 +462,8 @@ function computed(){
   let clock = startProgram;
   const rows = e.items.map(it => {
     const m = Number(it.min)||0;
-    const fs = it.fixStart ? toMin(it.fixStart) : null;
-    const fe = it.fixEnd ? toMin(it.fixEnd) : null;
+    const fs = it.fixStart ? nearCycle(toMin(it.fixStart), clock) : null;
+    const fe = it.fixEnd ? nearCycle(toMin(it.fixEnd), clock) : null;
     let start, end;
     if (fs!=null && fe!=null){ start = fs; end = fe; if (end < start) end += 1440; }
     else if (fs!=null){ start = fs; end = fs + m; }
@@ -503,7 +516,7 @@ function renderStatus(){
   }
   let gaps = 0, over = 0;
   for (let i=1;i<c.rows.length;i++){ const d = c.rows[i].startM - c.rows[i-1].endM; if (d>0) gaps += d; else if (d<0) over += -d; }
-  if (gaps > 0) el.innerHTML += '<div style="margin-top:8px;color:#d3342b;font-weight:600">Dazwischen ist noch <b>'+gaps+' Minuten</b> Luft, siehe die gelben Lücken in der Liste.</div>';
+  if (gaps > 0) el.innerHTML += '<div style="margin-top:8px;color:#d3342b;font-weight:600">Dazwischen ist noch <b>'+gaps+' Minuten</b> Luft, siehe die roten Lücken in der Liste.</div>';
   if (over > 0) el.innerHTML += '<div style="margin-top:8px;color:#a8331f">Achtung, <b>'+over+' Minuten</b> Überschneidung, da läuft etwas ineinander (rot markiert in der Liste).</div>';
 }
 function renderRows(){
@@ -559,8 +572,7 @@ function renderRows(){
     const grow = () => { inN.style.height='auto'; inN.style.height=(inN.scrollHeight+2)+'px'; };
     inN.oninput = () => { it.name = inN.value; grow(); save(); }; tdN.appendChild(inN); tr.appendChild(tdN);
     const tdM = document.createElement('td'); const inM = document.createElement('input'); inM.className='min'; inM.type='number'; inM.min='0'; inM.value=it.min;
-    if (it.fixStart && it.fixEnd){ inM.disabled = true; inM.title = 'Wird aus Anfang und Ende berechnet'; }
-    inM.oninput = () => { it.min = Number(inM.value)||0; save(); updateTimes(); }; inM.onchange = () => { renderRows(); renderStatus(); renderTot(); }; tdM.appendChild(inM); tr.appendChild(tdM);
+    inM.oninput = () => { if (it.fixStart && it.fixEnd) it.fixStart = undefined; it.min = Number(inM.value)||0; save(); updateTimes(); }; inM.onchange = () => { renderRows(); renderStatus(); renderTot(); }; tdM.appendChild(inM); tr.appendChild(tdM);
     const tdBt = document.createElement('td'); const wrap = document.createElement('div'); wrap.className='rowbtns';
     const stretch = document.createElement('button'); stretch.className='stretchbtn hastip'; stretch.type='button'; stretch.dataset.tip='Länge bis zum nächsten Fixpunkt strecken';
     stretch.innerHTML = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v16"/><path d="M8 8l4-4 4 4"/><path d="M8 16l4 4 4-4"/></svg>';
@@ -596,15 +608,14 @@ function renderRows(){
           const ov = -diff;
           gtd.innerHTML = 'Überschneidung von <b>'+ov+' Min</b> – hier läuft etwas ineinander. Auflösen: ';
           const canUp = !prev.fixEnd;
-          const canDown = !!(cur.fixEnd && !cur.fixStart);
           if (canUp){
             const up = document.createElement('button'); up.className='ovarrow hastip'; up.type='button'; up.textContent='↑'; up.dataset.tip='Nach oben auflösen: Punkt darüber kürzen';
             up.onclick = () => { prev.min = Math.max(0, (Number(prev.min)||0) - ov); save(); renderRows(); renderStatus(); renderTot(); };
             gtd.appendChild(up);
           }
-          if (canDown){
-            const dn = document.createElement('button'); dn.className='ovarrow hastip'; dn.type='button'; dn.textContent='↓'; dn.dataset.tip='Nach unten auflösen: diesen Punkt kürzen';
-            dn.onclick = () => { cur.min = Math.max(0, (Number(cur.min)||0) - ov); save(); renderRows(); renderStatus(); renderTot(); };
+          if (cur.fixStart || cur.fixEnd){
+            const dn = document.createElement('button'); dn.className='ovarrow hastip'; dn.type='button'; dn.textContent='↓'; dn.dataset.tip='Nach unten auflösen: darüber bleibt gleich, fester Punkt rutscht nach hinten';
+            dn.onclick = () => { if (cur.fixStart) cur.fixStart = fmt(toMin(cur.fixStart) + ov); if (cur.fixEnd) cur.fixEnd = fmt(toMin(cur.fixEnd) + ov); syncMin(cur); save(); renderRows(); renderStatus(); renderTot(); };
             gtd.appendChild(dn);
           }
         }
@@ -616,6 +627,7 @@ function renderRows(){
   });
   window.scrollTo(0, sy);
   renderFilter();
+  updateUndo();
 }
 function btn(txt, fn){ const b=document.createElement('button'); b.textContent=txt; b.onclick=fn; return b; }
 let dragFrom = null;
@@ -709,6 +721,7 @@ function printPlan(){
 /* ====== Start ====== */
 function esc(s){ return String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 function renderLog(){
+  const cl = document.getElementById('logclear'); if (cl) cl.style.display = isAdmin() ? '' : 'none';
   const box = document.getElementById('logbox'); if (!box) return;
   const log = state.log || [];
   if (!log.length){ box.innerHTML = '<div class="logempty">Noch keine Änderungen aufgezeichnet.</div>'; return; }
@@ -721,7 +734,8 @@ function renderLog(){
     box.appendChild(row);
   }
 }
-function clearLog(){ if (!confirm('Die Änderungsliste komplett leeren?\n\nNur die Liste wird gelöscht, der Plan selbst bleibt unverändert.')) return; state.log = []; renderLog(); save(); }
+function isAdmin(){ return /monique/i.test(myName || ''); }
+function clearLog(){ if (!isAdmin()) return; if (!confirm('Die Änderungsliste komplett leeren?\n\nNur die Liste wird gelöscht, der Plan selbst bleibt unverändert.')) return; state.log = []; renderLog(); save(); }
 function setLogCollapsed(collapsed){
   const box = document.getElementById('logbox'), ar = document.getElementById('logarrow');
   if (box) box.style.display = collapsed ? 'none' : 'block';

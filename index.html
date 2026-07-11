@@ -29,7 +29,7 @@
   .card { background: #fff; border-radius: 12px; padding: 18px 18px 20px; box-shadow: 0 1px 3px rgba(0,0,0,.06); margin-bottom: 16px; }
   .card h2 { margin: 0 0 12px; font-size: 15px; }
   .filterbar { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px; }
-  .fchip { border:1px solid #d8d1c4; background:#f7f5f0; color:#5b6670; border-radius:20px; padding:5px 12px; font-size:12px; font-weight:600; cursor:pointer; }
+  .fchip { border:1px solid #d8d1c4; background:#f7f5f0; color:#5b6670; border-radius:7px; padding:5px 12px; font-size:12px; font-weight:600; cursor:pointer; }
   .fchip.on { background:#0d7d8a; color:#fff; border-color:#0d7d8a; }
   .fchip b { font-weight:800; }
 
@@ -746,7 +746,7 @@ function renderFilter(){
   keys.forEach(k => {
     const active = activeTypes.has(k);
     const b = document.createElement('button'); b.className='fchip'+(active?' on':'');
-    b.innerHTML = TYPES[k].label + ' <b>' + totals[k] + '</b>';
+    b.innerHTML = TYPES[k].label + ' <b>' + totals[k] + '</b> min';
     if (active){ b.style.background = TYPES[k].tint; b.style.borderColor = TYPES[k].color; b.style.color = '#23303a'; }
     b.onclick = () => {
       if (activeTypes.size === keys.length) activeTypes = new Set([k]);

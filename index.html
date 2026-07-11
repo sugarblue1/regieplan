@@ -111,7 +111,9 @@
   .addbar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
   .addbar button { padding: 9px 14px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; background: #0d7d8a; color: #fff; }
   .addbar button.ghost { background: #eee7da; color: #5b6670; }
-  #undoBtn:disabled { opacity: .4; cursor: default; }
+  .undobtn { padding: 9px 16px; border: 2px solid #0d7d8a; background: #fff; color: #0d7d8a; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; }
+  .undobtn:hover:not(:disabled) { background: #e3f3f4; }
+  #undoBtn:disabled { opacity: .35; cursor: default; }
 
   .presets { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
   .preset { display: flex; align-items: flex-end; gap: 6px; background: #faf7f1; border: 1px solid #e6dfd0; padding: 8px 10px; border-radius: 9px; }
@@ -207,7 +209,7 @@
       </table>
       </div>
       <div class="addbar" id="addbar">
-        <button id="undoBtn" class="ghost" onclick="undo()" disabled>↶ Rückgängig</button>
+        <button id="undoBtn" class="undobtn" onclick="undo()" disabled>↶ Rückgängig</button>
         <button style="background:#E84B8A" onclick="addItem('kuenstler')">+ Artist</button>
         <button style="background:#8E6FD0" onclick="addItem('sosa')">+ SOSA</button>
         <button style="background:#3FB873" onclick="addItem('redebeitrag')">+ Redebeitrag</button>

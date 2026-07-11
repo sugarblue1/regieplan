@@ -541,7 +541,7 @@ function renderRows(){
     const stretch = document.createElement('button'); stretch.className='stretchbtn hastip'; stretch.type='button'; stretch.dataset.tip='Länge bis zum nächsten Fixpunkt strecken';
     stretch.innerHTML = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v16"/><path d="M8 8l4-4 4 4"/><path d="M8 16l4 4 4-4"/></svg>';
     stretch.onclick = () => fillToNext(idx);
-    const del = btn('✕', () => { ev().items.splice(idx,1); save(); renderRows(); renderStatus(); renderTot(); }); del.className='del';
+    const del = btn('✕', () => { const nm = (it.name ? it.name.split('\n')[0] : '') || (TYPES[it.type]||TYPES.kuenstler).label; if (!confirm('Diesen Punkt wirklich löschen?\n\n' + nm)) return; ev().items.splice(idx,1); save(); renderRows(); renderStatus(); renderTot(); }); del.className='del'; del.classList.add('hastip'); del.dataset.tip='Punkt löschen';
     wrap.append(stretch, del); tdBt.appendChild(wrap); tr.appendChild(tdBt);
     const tdV = document.createElement('td'); const inV = document.createElement('textarea'); inV.className='video'; inV.rows=1; inV.value=it.video||''; inV.placeholder='Was läuft auf der Leinwand?';
     const growV = () => { inV.style.height='auto'; inV.style.height=(inV.scrollHeight+2)+'px'; };

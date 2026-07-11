@@ -67,6 +67,8 @@
   .bislbl { font-size:11px; color:#9aa3ab; }
   .gaprow td { background:#fff5e0; color:#8a5a00; font-size:12px; font-weight:600; padding:5px 12px; border-bottom:1px solid #f0eee8; }
   .gapclose { margin-left:8px; border:1px solid #e6c98a; background:#fff; color:#8a5a00; border-radius:6px; padding:2px 9px; font-size:11px; font-weight:700; cursor:pointer; }
+  .overlaprow td { background:#fbe7e4; color:#a8331f; font-size:12px; font-weight:600; padding:5px 12px; border-bottom:1px solid #f0eee8; }
+  .ovbtn { border-color:#e0a6a0; color:#a8331f; }
   .tablescroll { overflow-x: auto; }
   select.type { width: 150px; }
   .stage { display:flex; flex-direction:row; align-items:center; gap:8px; }
@@ -484,8 +486,10 @@ function renderStatus(){
     const w = endOff > 0 ? (endOff + ' Minuten zu spät') : ((-endOff) + ' Minuten zu früh');
     el.innerHTML = 'Anfang <b>'+startClock+'</b>, Ende <b>'+endClock+'</b>. Das ist <b>'+w+'</b> gegenüber deiner Zielzeit '+e.endTime+'. Passe die Längen oder eine feste Zeit an, bis es pünktlich endet.' + note;
   }
-  let gaps = 0; for (let i=1;i<c.rows.length;i++){ const g = c.rows[i].startM - c.rows[i-1].endM; if (g>0) gaps += g; }
-  if (gaps > 0) el.innerHTML += '<div style="margin-top:8px;color:#8a5a00">Dazwischen ist noch <b>'+gaps+' Minuten</b> Luft, siehe die markierten Lücken in der Liste.</div>';
+  let gaps = 0, over = 0;
+  for (let i=1;i<c.rows.length;i++){ const d = c.rows[i].startM - c.rows[i-1].endM; if (d>0) gaps += d; else if (d<0) over += -d; }
+  if (gaps > 0) el.innerHTML += '<div style="margin-top:8px;color:#8a5a00">Dazwischen ist noch <b>'+gaps+' Minuten</b> Luft, siehe die gelben Lücken in der Liste.</div>';
+  if (over > 0) el.innerHTML += '<div style="margin-top:8px;color:#a8331f">Achtung, <b>'+over+' Minuten</b> Überschneidung, da läuft etwas ineinander (rot markiert in der Liste).</div>';
 }
 function renderRows(){
   const sy = window.scrollY;
@@ -557,18 +561,28 @@ function renderRows(){
     tr.addEventListener('dragover', e => e.preventDefault());
     tr.addEventListener('drop', e => { e.preventDefault(); dropOn(idx); });
     if (idx > 0){
-      const gap = r.startM - c.rows[idx-1].endM;
-      if (gap > 0){
-        const gtr = document.createElement('tr'); gtr.className='gaprow';
-        const gtd = document.createElement('td'); gtd.colSpan = 9;
-        gtd.innerHTML = 'Lücke von <b>'+gap+' Min</b> – hier ist noch Luft. ';
+      const diff = r.startM - c.rows[idx-1].endM;
+      if (diff !== 0){
         const cur = ev().items[idx]; const prev = ev().items[idx-1];
-        const canCur = !!(cur.fixEnd && !cur.fixStart);
-        const canPrev = !prev.fixEnd;
-        if (canCur || canPrev){
-          const cb = document.createElement('button'); cb.className='gapclose'; cb.type='button'; cb.textContent='Lücke schließen';
-          cb.onclick = () => { if (canCur) cur.min = (Number(cur.min)||0) + gap; else prev.min = (Number(prev.min)||0) + gap; save(); renderRows(); renderStatus(); renderTot(); };
-          gtd.appendChild(cb);
+        const gtr = document.createElement('tr'); gtr.className = diff>0 ? 'gaprow' : 'overlaprow';
+        const gtd = document.createElement('td'); gtd.colSpan = 9;
+        if (diff > 0){
+          gtd.innerHTML = 'Lücke von <b>'+diff+' Min</b> – hier ist noch Luft. ';
+          const canCur = !!(cur.fixEnd && !cur.fixStart);
+          const canPrev = !prev.fixEnd;
+          if (canCur || canPrev){
+            const cb = document.createElement('button'); cb.className='gapclose'; cb.type='button'; cb.textContent='Lücke schließen';
+            cb.onclick = () => { if (canCur) cur.min = (Number(cur.min)||0) + diff; else prev.min = (Number(prev.min)||0) + diff; save(); renderRows(); renderStatus(); renderTot(); };
+            gtd.appendChild(cb);
+          }
+        } else {
+          const ov = -diff;
+          gtd.innerHTML = 'Überschneidung von <b>'+ov+' Min</b> – hier läuft etwas ineinander. ';
+          if (!prev.fixEnd){
+            const cb = document.createElement('button'); cb.className='gapclose ovbtn'; cb.type='button'; cb.textContent='Überschneidung auflösen';
+            cb.onclick = () => { prev.min = Math.max(0, (Number(prev.min)||0) - ov); save(); renderRows(); renderStatus(); renderTot(); };
+            gtd.appendChild(cb);
+          }
         }
         gtr.appendChild(gtd); tb.appendChild(gtr);
       }
@@ -601,7 +615,7 @@ function fillToNext(idx){
 function renderTot(){ const c=computed(); const h=Math.floor(c.total/60), m=c.total%60; document.getElementById('totbar').innerHTML='Gesamtlänge Programm: <b>'+c.total+' Minuten</b>'+(c.total>=60?' ('+h+' Std '+m+' Min)':''); }
 function updateTimes(){
   const c = computed();
-  const trs = document.querySelectorAll('#rows tr:not(.gaprow)');
+  const trs = document.querySelectorAll('#rows tr:not(.gaprow):not(.overlaprow)');
   c.rows.forEach((r, i) => {
     const tr = trs[i]; if (!tr) return;
     const s = tr.querySelector('.timeedit:not(.end)');

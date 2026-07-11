@@ -156,6 +156,8 @@
     #printarea th { text-align: left; font-size: 10px; text-transform: uppercase; border-bottom: 2px solid #000; padding: 4px 5px; }
     #printarea td { padding: 4px 5px; border-bottom: 1px solid #ccc; font-size: 11px; vertical-align: top; }
     #printarea .t { font-weight: 700; white-space: nowrap; }
+    #printarea, #printarea * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    #printarea tbody tr:nth-child(even) td { background: #ededed; }
   }
 </style>
 </head>

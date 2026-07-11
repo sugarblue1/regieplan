@@ -131,6 +131,7 @@
   .logrow .who { font-weight:700; color:#0d7d8a; white-space:nowrap; min-width:80px; }
   .logrow .what { color:#23303a; }
   .logempty { color:#8a939b; }
+  .logclear { border:1px solid #d8d1c4; background:#fff; color:#a8331f; border-radius:7px; padding:2px 10px; font-size:11px; font-weight:700; cursor:pointer; margin-left:12px; vertical-align:middle; }
 
   /* Login */
   #gate { position: fixed; inset: 0; background: #23303a; display: flex; align-items: center; justify-content: center; z-index: 50; }
@@ -220,7 +221,7 @@
     </div>
 
     <div class="card" id="logcard">
-      <h2 id="logtoggle" style="cursor:pointer;user-select:none">Änderungen — wer hat was gemacht <span id="logarrow" style="font-size:12px;font-weight:600;color:#8a939b">▸ aufklappen</span></h2>
+      <h2 id="logtoggle" style="cursor:pointer;user-select:none">Änderungen — wer hat was gemacht <span id="logarrow" style="font-size:12px;font-weight:600;color:#8a939b">▸ aufklappen</span><button class="logclear" onclick="event.stopPropagation(); clearLog();">Liste leeren</button></h2>
       <div id="logbox" class="loglist" style="display:none"></div>
     </div>
 
@@ -720,6 +721,7 @@ function renderLog(){
     box.appendChild(row);
   }
 }
+function clearLog(){ if (!confirm('Die Änderungsliste komplett leeren?\n\nNur die Liste wird gelöscht, der Plan selbst bleibt unverändert.')) return; state.log = []; renderLog(); save(); }
 function setLogCollapsed(collapsed){
   const box = document.getElementById('logbox'), ar = document.getElementById('logarrow');
   if (box) box.style.display = collapsed ? 'none' : 'block';

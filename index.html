@@ -28,6 +28,10 @@
 
   .card { background: #fff; border-radius: 12px; padding: 18px 18px 20px; box-shadow: 0 1px 3px rgba(0,0,0,.06); margin-bottom: 16px; }
   .card h2 { margin: 0 0 12px; font-size: 15px; }
+  .filterbar { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px; }
+  .fchip { border:1px solid #d8d1c4; background:#f7f5f0; color:#5b6670; border-radius:20px; padding:5px 12px; font-size:12px; font-weight:600; cursor:pointer; }
+  .fchip.on { background:#0d7d8a; color:#fff; border-color:#0d7d8a; }
+  .fchip b { font-weight:800; }
 
   .settings { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-end; }
   .field { display: flex; flex-direction: column; gap: 4px; }
@@ -182,11 +186,12 @@
       </div>
       <div class="status" id="status"></div>
       <div class="remotehint" id="remotehint">Es gibt neue Änderungen von jemand anderem. Sobald du hier fertig getippt hast, werden sie übernommen.</div>
-      <div class="hint">Das Ende bleibt immer fest. Wenn es eng wird, wird nur vorne beim Anfang Platz gemacht, nie hinten bei den Künstlern. Längen ändern sich nur, wenn du sie selbst eintippst.</div>
+      <div class="hint">Die Zeiten laufen von oben nach unten durch. Wo du eine feste Zeit einloggst, wird ab dort automatisch weitergezählt. Oben siehst du Anfang, Ende und ob es zu deiner Zielzeit passt, dazu Lücken und Überschneidungen. Längen ändern sich, wenn du sie eintippst, wenn du Anfang und Ende festlegst, oder wenn du die kleinen Knöpfe zum Schließen und Auflösen benutzt.</div>
     </div>
 
     <div class="card">
       <h2>Programm</h2>
+      <div id="filterbar" class="filterbar"></div>
       <div class="tablescroll">
       <table class="plan">
         <thead><tr><th class="hcol"></th><th>Uhrzeit</th><th>Art</th><th title="Anzahl der Leute auf der Bühne und passende Symbole">Bühne</th><th>Programmpunkt</th><th>Minuten</th><th></th><th>Video</th><th>Infos</th></tr></thead>
@@ -250,6 +255,10 @@ const TYPES = {
   spende:      { label: 'Spenden Aktion',     color: '#E8952A', tint: '#FBE1BF' },
   videoton:    { label: 'Videoclip mit Ton',  color: '#3949AB', tint: '#CDD3F0' }
 };
+function allTypeKeys(){ return Object.keys(TYPES); }
+function loadFilter(){ try { const r = localStorage.getItem('regieplan_filter'); if (r){ const arr = JSON.parse(r).filter(k => TYPES[k]); if (arr.length) return new Set(arr); } } catch(e){} return new Set(allTypeKeys()); }
+function saveFilter(){ localStorage.setItem('regieplan_filter', JSON.stringify([...activeTypes])); }
+let activeTypes = loadFilter();
 const ICONS = {
   einhorn: { label: 'Spendenaktion', svg: '<span style="filter:grayscale(1);opacity:.5;font-size:14px;line-height:1">🦄</span>' },
   band: { label: 'Band', svg: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="18" r="2.6"/><circle cx="17" cy="16" r="2.6"/><path d="M8.6 18V5.5L19.6 3.6V16"/><path d="M8.6 9.2l11-1.9"/></svg>' },
@@ -496,10 +505,12 @@ function renderStatus(){
 function renderRows(){
   const sy = window.scrollY;
   const c = computed(); const tb = document.getElementById('rows'); tb.innerHTML = '';
+  const filterActive = activeTypes.size < allTypeKeys().length;
   c.rows.forEach((r, idx) => {
     const it = r.it;
+    if (!activeTypes.has(it.type)) return;
     const ty = TYPES[it.type] || TYPES.kuenstler;
-    const tr = document.createElement('tr'); tr.draggable = true; tr.dataset.idx = idx;
+    const tr = document.createElement('tr'); tr.draggable = true; tr.dataset.idx = idx; tr.dataset.itemid = it.id;
     const tdH = document.createElement('td'); tdH.className = 'handle hcol'; tdH.textContent = '⠿'; tr.appendChild(tdH);
     const tdT = document.createElement('td'); tdT.className='timecell';
     const block = document.createElement('div'); block.className='timeblock';
@@ -562,7 +573,7 @@ function renderRows(){
     tr.addEventListener('dragend', () => tr.classList.remove('dragging'));
     tr.addEventListener('dragover', e => e.preventDefault());
     tr.addEventListener('drop', e => { e.preventDefault(); dropOn(idx); });
-    if (idx > 0){
+    if (!filterActive && idx > 0){
       const diff = r.startM - c.rows[idx-1].endM;
       if (diff !== 0){
         const cur = ev().items[idx]; const prev = ev().items[idx-1];
@@ -600,6 +611,7 @@ function renderRows(){
     grow(); growV(); growI();
   });
   window.scrollTo(0, sy);
+  renderFilter();
 }
 function btn(txt, fn){ const b=document.createElement('button'); b.textContent=txt; b.onclick=fn; return b; }
 let dragFrom = null;
@@ -624,9 +636,9 @@ function fillToNext(idx){
 function renderTot(){ const c=computed(); const h=Math.floor(c.total/60), m=c.total%60; document.getElementById('totbar').innerHTML='Gesamtlänge Programm: <b>'+c.total+' Minuten</b>'+(c.total>=60?' ('+h+' Std '+m+' Min)':''); }
 function updateTimes(){
   const c = computed();
-  const trs = document.querySelectorAll('#rows tr:not(.gaprow):not(.overlaprow)');
-  c.rows.forEach((r, i) => {
-    const tr = trs[i]; if (!tr) return;
+  const byId = {}; c.rows.forEach(r => { byId[r.it.id] = r; });
+  document.querySelectorAll('#rows tr[data-itemid]').forEach(tr => {
+    const r = byId[tr.dataset.itemid]; if (!r) return;
     const s = tr.querySelector('.timeedit:not(.end)');
     const e = tr.querySelector('.timeedit.end');
     if (s && document.activeElement !== s) s.value = fmt(r.startM);
@@ -721,6 +733,29 @@ function applyReadonly(){
   document.querySelectorAll('#addbar, .rowbtns, #presets button').forEach(el => { el.style.display = 'none'; });
   document.querySelectorAll('#rows tr').forEach(tr => { tr.draggable = false; });
   ['logcard','presetcard'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+}
+function renderFilter(){
+  const box = document.getElementById('filterbar'); if (!box) return;
+  box.innerHTML = '';
+  const keys = allTypeKeys();
+  const totals = {}; keys.forEach(k => totals[k]=0);
+  ev().items.forEach(it => { if (totals[it.type]!=null) totals[it.type] += (Number(it.min)||0); });
+  const allBtn = document.createElement('button'); allBtn.className='fchip'+(activeTypes.size===keys.length?' on':''); allBtn.textContent='Alle';
+  allBtn.onclick = () => { activeTypes = new Set(keys); saveFilter(); renderRows(); };
+  box.appendChild(allBtn);
+  keys.forEach(k => {
+    const active = activeTypes.has(k);
+    const b = document.createElement('button'); b.className='fchip'+(active?' on':'');
+    b.innerHTML = TYPES[k].label + ' <b>' + totals[k] + '</b>';
+    if (active){ b.style.background = TYPES[k].tint; b.style.borderColor = TYPES[k].color; b.style.color = '#23303a'; }
+    b.onclick = () => {
+      if (activeTypes.size === keys.length) activeTypes = new Set([k]);
+      else if (activeTypes.has(k)){ activeTypes.delete(k); if (!activeTypes.size) activeTypes = new Set(keys); }
+      else activeTypes.add(k);
+      saveFilter(); renderRows();
+    };
+    box.appendChild(b);
+  });
 }
 function renderAll(){ renderTabs(); renderSettings(); renderRows(); renderStatus(); renderTot(); renderPresets(); renderLog(); applyReadonly(); document.getElementById('copyhint').textContent=''; }
 boot();

@@ -60,7 +60,8 @@
   .timeedit.locked { background:#e3f3f4; border-color:#bfe3e6; }
   .timesub { font-size:11px; color:#9aa3ab; margin:2px 0 0 5px; display:flex; align-items:center; gap:3px; }
   .timeedit.end { width:62px; font-size:13px; font-weight:600; color:#6b7680; }
-  .trow { display:flex; align-items:center; gap:5px; }
+  .timecell { display:flex; align-items:center; gap:7px; }
+  .timeblock { display:flex; flex-direction:column; }
   select.type { width: 150px; }
   .stage { display:flex; flex-direction:row; align-items:center; gap:8px; }
   .stage input.people { width:46px; padding:6px 6px; border:1px solid #d6cfc2; border-radius:6px; font-size:13px; text-align:center; background:#faf9f6; }
@@ -486,17 +487,19 @@ function renderRows(){
     const tdH = document.createElement('td'); tdH.className = 'handle hcol'; tdH.textContent = '⠿'; tr.appendChild(tdH);
     const tdT = document.createElement('td'); tdT.className='timecell';
     const hasFix = !!(it.fixStart || it.fixEnd);
-    const trow = document.createElement('div'); trow.className='trow';
+    const block = document.createElement('div'); block.className='timeblock';
     const tStart = document.createElement('input'); tStart.className = 'timeedit' + (it.fixStart ? ' locked' : ''); tStart.type='text'; tStart.inputMode='numeric'; tStart.value = fmt(r.startM); tStart.title = 'Startzeit festmachen';
     tStart.onchange = () => { const v = parseTimeInput(tStart.value); it.fixStart = v || undefined; syncMin(it); save(); renderRows(); renderStatus(); renderTot(); };
-    const lockBtn = document.createElement('button'); lockBtn.className = 'lockbtn' + (hasFix ? ' on' : ''); lockBtn.innerHTML = hasFix ? LOCK_CLOSED : LOCK_OPEN;
-    lockBtn.title = hasFix ? 'Feste Zeiten lösen' : 'Startzeit festmachen';
-    lockBtn.onclick = () => { if (hasFix){ it.fixStart = undefined; it.fixEnd = undefined; } else { it.fixStart = fmt(r.startM); } syncMin(it); save(); renderRows(); renderStatus(); renderTot(); };
-    trow.appendChild(tStart); trow.appendChild(lockBtn); tdT.appendChild(trow);
+    block.appendChild(tStart);
     const sub = document.createElement('div'); sub.className='timesub'; sub.appendChild(document.createTextNode('bis '));
     const tEnd = document.createElement('input'); tEnd.className = 'timeedit end' + (it.fixEnd ? ' locked' : ''); tEnd.type='text'; tEnd.inputMode='numeric'; tEnd.value = fmt(r.endM); tEnd.title = 'Endzeit festmachen';
     tEnd.onchange = () => { const v = parseTimeInput(tEnd.value); it.fixEnd = v || undefined; syncMin(it); save(); renderRows(); renderStatus(); renderTot(); };
-    sub.appendChild(tEnd); tdT.appendChild(sub);
+    sub.appendChild(tEnd); block.appendChild(sub);
+    tdT.appendChild(block);
+    const lockBtn = document.createElement('button'); lockBtn.className = 'lockbtn' + (hasFix ? ' on' : ''); lockBtn.innerHTML = hasFix ? LOCK_CLOSED : LOCK_OPEN;
+    lockBtn.title = hasFix ? 'Feste Zeiten lösen' : 'Startzeit festmachen';
+    lockBtn.onclick = () => { if (hasFix){ it.fixStart = undefined; it.fixEnd = undefined; } else { it.fixStart = fmt(r.startM); } syncMin(it); save(); renderRows(); renderStatus(); renderTot(); };
+    tdT.appendChild(lockBtn);
     tr.appendChild(tdT);
     const tdType = document.createElement('td'); const sel = document.createElement('select'); sel.className='type';
     sel.style.background = ty.tint; sel.style.fontWeight = '600';

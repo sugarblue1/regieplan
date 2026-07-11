@@ -73,7 +73,7 @@
   .stage input.people { width:46px; padding:6px 6px; border:1px solid #d6cfc2; border-radius:6px; font-size:13px; text-align:center; background:#faf9f6; }
   input[type=number] { -moz-appearance:textfield; appearance:textfield; }
   input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
-  .iconrow { display:flex; gap:4px; flex-wrap:wrap; }
+  .iconrow { display:grid; grid-template-columns: repeat(2, max-content); gap:4px; }
   .iconbtn { width:28px; height:28px; display:flex; align-items:center; justify-content:center; border:1px solid #ded8cc; background:#f7f5f0; border-radius:6px; cursor:pointer; color:#b3bac1; padding:0; }
   .iconbtn.on { color:#23303a; background:#e6e2d9; border-color:#c7c0b2; }
   .rowbtns button { display:inline-flex; align-items:center; justify-content:center; }

@@ -528,7 +528,7 @@ function renderRows(){
     for (const key in ICONS){
       const ib = document.createElement('button'); const on = Array.isArray(it.icons) && it.icons.includes(key);
       ib.className = 'iconbtn hastip' + (on ? ' on' : ''); ib.type='button'; ib.innerHTML = ICONS[key].svg; ib.dataset.tip = ICONS[key].label;
-      if (on){ ib.style.color = ty.color; ib.style.background = ty.tint; ib.style.borderColor = ty.color; }
+      if (on){ const ic = (key === 'micro') ? {color:'#3FA9DC', tint:'#CDE9F7'} : ty; ib.style.color = ic.color; ib.style.background = ic.tint; ib.style.borderColor = ic.color; }
       ib.onclick = () => { if (!Array.isArray(it.icons)) it.icons = []; const ix = it.icons.indexOf(key); if (ix>=0) it.icons.splice(ix,1); else it.icons.push(key); save(); renderRows(); };
       iconRow.appendChild(ib);
     }

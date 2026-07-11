@@ -562,10 +562,12 @@ function renderRows(){
         const gtr = document.createElement('tr'); gtr.className='gaprow';
         const gtd = document.createElement('td'); gtd.colSpan = 9;
         gtd.innerHTML = 'Lücke von <b>'+gap+' Min</b> – hier ist noch Luft. ';
-        const prev = ev().items[idx-1];
-        if (!prev.fixEnd){
+        const cur = ev().items[idx]; const prev = ev().items[idx-1];
+        const canCur = !!(cur.fixEnd && !cur.fixStart);
+        const canPrev = !prev.fixEnd;
+        if (canCur || canPrev){
           const cb = document.createElement('button'); cb.className='gapclose'; cb.type='button'; cb.textContent='Lücke schließen';
-          cb.onclick = () => { prev.min = (Number(prev.min)||0) + gap; save(); renderRows(); renderStatus(); renderTot(); };
+          cb.onclick = () => { if (canCur) cur.min = (Number(cur.min)||0) + gap; else prev.min = (Number(prev.min)||0) + gap; save(); renderRows(); renderStatus(); renderTot(); };
           gtd.appendChild(cb);
         }
         gtr.appendChild(gtd); tb.appendChild(gtr);

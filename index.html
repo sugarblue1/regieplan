@@ -60,8 +60,11 @@
   .timeedit.locked { background:#e3f3f4; border-color:#bfe3e6; }
   .timesub { font-size:11px; color:#9aa3ab; margin:2px 0 0 5px; display:flex; align-items:center; gap:3px; }
   .timeedit.end { width:62px; font-size:13px; font-weight:600; color:#6b7680; }
-  .timecell { display:flex; align-items:center; gap:7px; min-width:175px; }
-  .timeblock { display:flex; flex-direction:column; }
+  .timecell { min-width:175px; }
+  .timeblock { display:flex; flex-direction:column; gap:3px; }
+  .trow2 { display:flex; align-items:center; gap:5px; }
+  .gaprow td { background:#fff5e0; color:#8a5a00; font-size:12px; font-weight:600; padding:5px 12px; border-bottom:1px solid #f0eee8; }
+  .gapclose { margin-left:8px; border:1px solid #e6c98a; background:#fff; color:#8a5a00; border-radius:6px; padding:2px 9px; font-size:11px; font-weight:700; cursor:pointer; }
   .tablescroll { overflow-x: auto; }
   select.type { width: 150px; }
   .stage { display:flex; flex-direction:row; align-items:center; gap:8px; }
@@ -482,8 +485,11 @@ function renderStatus(){
     const w = endOff > 0 ? (endOff + ' Minuten zu spät') : ((-endOff) + ' Minuten zu früh');
     el.innerHTML = 'Anfang <b>'+startClock+'</b>, Ende <b>'+endClock+'</b>. Das ist <b>'+w+'</b> gegenüber deiner Zielzeit '+e.endTime+'. Passe die Längen oder eine feste Zeit an, bis es pünktlich endet.' + note;
   }
+  let gaps = 0; for (let i=1;i<c.rows.length;i++){ const g = c.rows[i].startM - c.rows[i-1].endM; if (g>0) gaps += g; }
+  if (gaps > 0) el.innerHTML += '<div style="margin-top:8px;color:#8a5a00">Dazwischen ist noch <b>'+gaps+' Minuten</b> Luft, siehe die markierten Lücken in der Liste.</div>';
 }
 function renderRows(){
+  const sy = window.scrollY;
   const c = computed(); const tb = document.getElementById('rows'); tb.innerHTML = '';
   c.rows.forEach((r, idx) => {
     const it = r.it;
@@ -491,20 +497,20 @@ function renderRows(){
     const tr = document.createElement('tr'); tr.draggable = true; tr.dataset.idx = idx;
     const tdH = document.createElement('td'); tdH.className = 'handle hcol'; tdH.textContent = '⠿'; tr.appendChild(tdH);
     const tdT = document.createElement('td'); tdT.className='timecell';
-    const hasFix = !!(it.fixStart || it.fixEnd);
     const block = document.createElement('div'); block.className='timeblock';
-    const tStart = document.createElement('input'); tStart.className = 'timeedit' + (it.fixStart ? ' locked' : ''); tStart.type='text'; tStart.inputMode='numeric'; tStart.value = fmt(r.startM); tStart.title = 'Startzeit festmachen';
+    const r1 = document.createElement('div'); r1.className='trow2';
+    const tStart = document.createElement('input'); tStart.className = 'timeedit' + (it.fixStart ? ' locked' : ''); tStart.type='text'; tStart.inputMode='numeric'; tStart.value = fmt(r.startM);
     tStart.onchange = () => { const v = parseTimeInput(tStart.value); it.fixStart = v || undefined; syncMin(it); save(); renderRows(); renderStatus(); renderTot(); };
-    block.appendChild(tStart);
-    const sub = document.createElement('div'); sub.className='timesub'; sub.appendChild(document.createTextNode('bis '));
-    const tEnd = document.createElement('input'); tEnd.className = 'timeedit end' + (it.fixEnd ? ' locked' : ''); tEnd.type='text'; tEnd.inputMode='numeric'; tEnd.value = fmt(r.endM); tEnd.title = 'Endzeit festmachen';
+    const lockS = document.createElement('button'); lockS.className = 'lockbtn hastip' + (it.fixStart ? ' on' : ''); lockS.innerHTML = it.fixStart ? LOCK_CLOSED : LOCK_OPEN; lockS.dataset.tip = it.fixStart ? 'Startzeit lösen' : 'Startzeit einloggen';
+    lockS.onclick = () => { it.fixStart = it.fixStart ? undefined : fmt(r.startM); syncMin(it); save(); renderRows(); renderStatus(); renderTot(); };
+    r1.append(tStart, lockS); block.appendChild(r1);
+    const r2 = document.createElement('div'); r2.className='timesub'; r2.appendChild(document.createTextNode('bis '));
+    const tEnd = document.createElement('input'); tEnd.className = 'timeedit end' + (it.fixEnd ? ' locked' : ''); tEnd.type='text'; tEnd.inputMode='numeric'; tEnd.value = fmt(r.endM);
     tEnd.onchange = () => { const v = parseTimeInput(tEnd.value); it.fixEnd = v || undefined; syncMin(it); save(); renderRows(); renderStatus(); renderTot(); };
-    sub.appendChild(tEnd); block.appendChild(sub);
+    const lockE = document.createElement('button'); lockE.className = 'lockbtn hastip' + (it.fixEnd ? ' on' : ''); lockE.innerHTML = it.fixEnd ? LOCK_CLOSED : LOCK_OPEN; lockE.dataset.tip = it.fixEnd ? 'Endzeit lösen' : 'Endzeit einloggen';
+    lockE.onclick = () => { it.fixEnd = it.fixEnd ? undefined : fmt(r.endM); syncMin(it); save(); renderRows(); renderStatus(); renderTot(); };
+    r2.append(tEnd, lockE); block.appendChild(r2);
     tdT.appendChild(block);
-    const lockBtn = document.createElement('button'); lockBtn.className = 'lockbtn hastip' + (hasFix ? ' on' : ''); lockBtn.innerHTML = hasFix ? LOCK_CLOSED : LOCK_OPEN;
-    lockBtn.dataset.tip = hasFix ? 'Feste Zeiten lösen' : 'Startzeit festmachen';
-    lockBtn.onclick = () => { if (hasFix){ it.fixStart = undefined; it.fixEnd = undefined; } else { it.fixStart = fmt(r.startM); } syncMin(it); save(); renderRows(); renderStatus(); renderTot(); };
-    tdT.appendChild(lockBtn);
     tr.appendChild(tdT);
     const tdType = document.createElement('td'); const sel = document.createElement('select'); sel.className='type';
     sel.style.background = ty.tint; sel.style.fontWeight = '600';
@@ -530,7 +536,7 @@ function renderRows(){
     inN.oninput = () => { it.name = inN.value; grow(); save(); }; tdN.appendChild(inN); tr.appendChild(tdN);
     const tdM = document.createElement('td'); const inM = document.createElement('input'); inM.className='min'; inM.type='number'; inM.min='0'; inM.value=it.min;
     if (it.fixStart && it.fixEnd){ inM.disabled = true; inM.title = 'Wird aus Anfang und Ende berechnet'; }
-    inM.oninput = () => { it.min = Number(inM.value)||0; save(); updateTimes(); }; tdM.appendChild(inM); tr.appendChild(tdM);
+    inM.oninput = () => { it.min = Number(inM.value)||0; save(); updateTimes(); }; inM.onchange = () => { renderRows(); renderStatus(); renderTot(); }; tdM.appendChild(inM); tr.appendChild(tdM);
     const tdBt = document.createElement('td'); const wrap = document.createElement('div'); wrap.className='rowbtns';
     const stretch = document.createElement('button'); stretch.className='stretchbtn hastip'; stretch.type='button'; stretch.dataset.tip='Länge bis zum nächsten Fixpunkt strecken';
     stretch.innerHTML = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v16"/><path d="M8 8l4-4 4 4"/><path d="M8 16l4 4 4-4"/></svg>';
@@ -547,9 +553,25 @@ function renderRows(){
     tr.addEventListener('dragend', () => tr.classList.remove('dragging'));
     tr.addEventListener('dragover', e => e.preventDefault());
     tr.addEventListener('drop', e => { e.preventDefault(); dropOn(idx); });
+    if (idx > 0){
+      const gap = r.startM - c.rows[idx-1].endM;
+      if (gap > 0){
+        const gtr = document.createElement('tr'); gtr.className='gaprow';
+        const gtd = document.createElement('td'); gtd.colSpan = 9;
+        gtd.innerHTML = 'Lücke von <b>'+gap+' Min</b> – hier ist noch Luft. ';
+        const prev = ev().items[idx-1];
+        if (!prev.fixEnd){
+          const cb = document.createElement('button'); cb.className='gapclose'; cb.type='button'; cb.textContent='Lücke schließen';
+          cb.onclick = () => { prev.min = (Number(prev.min)||0) + gap; save(); renderRows(); renderStatus(); renderTot(); };
+          gtd.appendChild(cb);
+        }
+        gtr.appendChild(gtd); tb.appendChild(gtr);
+      }
+    }
     tb.appendChild(tr);
     grow(); growV(); growI();
   });
+  window.scrollTo(0, sy);
 }
 function btn(txt, fn){ const b=document.createElement('button'); b.textContent=txt; b.onclick=fn; return b; }
 let dragFrom = null;
@@ -574,7 +596,7 @@ function fillToNext(idx){
 function renderTot(){ const c=computed(); const h=Math.floor(c.total/60), m=c.total%60; document.getElementById('totbar').innerHTML='Gesamtlänge Programm: <b>'+c.total+' Minuten</b>'+(c.total>=60?' ('+h+' Std '+m+' Min)':''); }
 function updateTimes(){
   const c = computed();
-  const trs = document.querySelectorAll('#rows tr');
+  const trs = document.querySelectorAll('#rows tr:not(.gaprow)');
   c.rows.forEach((r, i) => {
     const tr = trs[i]; if (!tr) return;
     const s = tr.querySelector('.timeedit:not(.end)');
@@ -602,7 +624,7 @@ function renderPresets(){
   add.textContent='+ Neue Vorlage'; add.onclick=()=>{ state.presets.push({label:'Neu', min:3}); save(); renderPresets(); };
   box.appendChild(add);
 }
-function addItem(type){ const nit = { id:newId(), type, name:'', min: 10 }; if (type==='moderation') nit.icons = ['micro']; ev().items.push(nit); save(); renderRows(); renderStatus(); renderTot(); }
+function addItem(type){ const nit = { id:newId(), type, name:'', min: 10 }; if (type==='moderation'){ nit.icons = ['micro']; if (state.active==='samstag') nit.name = 'Ricarda Hofmann\nJochen Schropp'; } ev().items.push(nit); save(); renderRows(); renderStatus(); renderTot(); }
 function addModeration(p){ ev().items.push({ id:newId(), type:'moderation', name:p.label, min:Number(p.min)||0 }); save(); renderRows(); renderStatus(); renderTot(); }
 
 document.getElementById('title').oninput = e => { ev().title = e.target.value; save(); };

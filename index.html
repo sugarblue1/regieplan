@@ -627,7 +627,7 @@ function renderPresets(){
   add.textContent='+ Neue Vorlage'; add.onclick=()=>{ state.presets.push({label:'Neu', min:3}); save(); renderPresets(); };
   box.appendChild(add);
 }
-function addItem(type){ const nit = { id:newId(), type, name:'', min: 10 }; if (type==='moderation'){ nit.icons = ['micro']; if (state.active==='samstag') nit.name = 'Ricarda Hofmann\nJochen Schropp'; } ev().items.push(nit); save(); renderRows(); renderStatus(); renderTot(); }
+function addItem(type){ const nit = { id:newId(), type, name:'', min: 10 }; if (type==='moderation'){ nit.icons = ['micro']; if (state.active==='samstag') nit.name = 'Ricarda Hofmann\nJochen Schropp'; else if (state.active==='freitag') nit.name = 'Barbie Breakout\nFabian Grischkat'; } ev().items.push(nit); save(); renderRows(); renderStatus(); renderTot(); }
 function addModeration(p){ ev().items.push({ id:newId(), type:'moderation', name:p.label, min:Number(p.min)||0 }); save(); renderRows(); renderStatus(); renderTot(); }
 
 document.getElementById('title').oninput = e => { ev().title = e.target.value; save(); };

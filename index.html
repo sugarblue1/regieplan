@@ -508,12 +508,10 @@ function renderRows(){
     for (const k in TYPES){ const o=document.createElement('option'); o.value=k; o.textContent=TYPES[k].label; if(k===it.type)o.selected=true; sel.appendChild(o); }
     sel.onchange = () => { it.type = sel.value; if (it.type==='moderation'){ it.people = null; if(!Array.isArray(it.icons)) it.icons=[]; if(!it.icons.includes('micro')) it.icons.push('micro'); } save(); renderRows(); }; tdType.appendChild(sel); tr.appendChild(tdType);
     const tdS = document.createElement('td'); const stage = document.createElement('div'); stage.className='stage';
-    if (it.type !== 'moderation'){
-      const pw = document.createElement('span'); pw.className='hastip'; pw.dataset.tip='Anzahl der Leute auf der Bühne';
-      const ppl = document.createElement('input'); ppl.className='people'; ppl.type='number'; ppl.min='0'; ppl.placeholder='Pers.'; ppl.value = (it.people!=null ? it.people : '');
-      ppl.oninput = () => { it.people = (ppl.value===''? null : (Number(ppl.value)||0)); save(); };
-      pw.appendChild(ppl); stage.appendChild(pw);
-    }
+    const pw = document.createElement('span'); pw.className='hastip'; pw.dataset.tip='Anzahl der Leute auf der Bühne';
+    const ppl = document.createElement('input'); ppl.className='people'; ppl.type='number'; ppl.min='0'; ppl.placeholder='Pers.'; ppl.value = (it.people!=null ? it.people : '');
+    ppl.oninput = () => { it.people = (ppl.value===''? null : (Number(ppl.value)||0)); save(); };
+    pw.appendChild(ppl); stage.appendChild(pw);
     const iconRow = document.createElement('div'); iconRow.className='iconrow';
     for (const key in ICONS){
       const ib = document.createElement('button'); const on = Array.isArray(it.icons) && it.icons.includes(key);

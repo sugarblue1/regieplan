@@ -114,6 +114,7 @@
   .undobtn { padding: 9px 16px; border: 2px solid #0d7d8a; background: #fff; color: #0d7d8a; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; }
   .undobtn:hover:not(:disabled) { background: #e3f3f4; }
   #undoBtn:disabled { opacity: .35; cursor: default; }
+  .toptools { margin-bottom: 12px; }
 
   .presets { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
   .preset { display: flex; align-items: flex-end; gap: 6px; background: #faf7f1; border: 1px solid #e6dfd0; padding: 8px 10px; border-radius: 9px; }
@@ -201,6 +202,7 @@
 
     <div class="card">
       <h2>Programm</h2>
+      <div class="toptools"><button id="undoBtn" class="undobtn" onclick="undo()" disabled>↶ Rückgängig</button></div>
       <div id="filterbar" class="filterbar"></div>
       <div class="tablescroll">
       <table class="plan">
@@ -209,7 +211,6 @@
       </table>
       </div>
       <div class="addbar" id="addbar">
-        <button id="undoBtn" class="undobtn" onclick="undo()" disabled>↶ Rückgängig</button>
         <button style="background:#E84B8A" onclick="addItem('kuenstler')">+ Artist</button>
         <button style="background:#8E6FD0" onclick="addItem('sosa')">+ SOSA</button>
         <button style="background:#3FB873" onclick="addItem('redebeitrag')">+ Redebeitrag</button>
@@ -754,7 +755,7 @@ function applyReadonly(){
   document.querySelectorAll('#app input, #app textarea, #app select').forEach(el => { el.disabled = true; });
   document.querySelectorAll('#app .lockbtn').forEach(b => { b.disabled = true; });
   document.querySelectorAll('#app .iconbtn').forEach(b => { b.disabled = true; });
-  document.querySelectorAll('#addbar, .rowbtns, #presets button').forEach(el => { el.style.display = 'none'; });
+  document.querySelectorAll('#addbar, .rowbtns, #presets button, #undoBtn').forEach(el => { el.style.display = 'none'; });
   document.querySelectorAll('#rows tr').forEach(tr => { tr.draggable = false; });
   ['logcard','presetcard'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
 }

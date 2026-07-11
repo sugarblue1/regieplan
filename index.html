@@ -488,7 +488,7 @@ function renderStatus(){
   }
   let gaps = 0, over = 0;
   for (let i=1;i<c.rows.length;i++){ const d = c.rows[i].startM - c.rows[i-1].endM; if (d>0) gaps += d; else if (d<0) over += -d; }
-  if (gaps > 0) el.innerHTML += '<div style="margin-top:8px;color:#8a5a00">Dazwischen ist noch <b>'+gaps+' Minuten</b> Luft, siehe die gelben Lücken in der Liste.</div>';
+  if (gaps > 0) el.innerHTML += '<div style="margin-top:8px;color:#d3342b;font-weight:600">Dazwischen ist noch <b>'+gaps+' Minuten</b> Luft, siehe die gelben Lücken in der Liste.</div>';
   if (over > 0) el.innerHTML += '<div style="margin-top:8px;color:#a8331f">Achtung, <b>'+over+' Minuten</b> Überschneidung, da läuft etwas ineinander (rot markiert in der Liste).</div>';
 }
 function renderRows(){

@@ -32,6 +32,7 @@
   .fchip { border:1px solid #d8d1c4; background:#f7f5f0; color:#5b6670; border-radius:7px; padding:5px 12px; font-size:12px; font-weight:600; cursor:pointer; }
   .fchip.on { background:#0d7d8a; color:#fff; border-color:#0d7d8a; }
   .fchip b { font-weight:800; }
+  .fsep { opacity:.4; margin:0 2px; font-weight:400; }
 
   .settings { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-end; }
   .field { display: flex; flex-direction: column; gap: 4px; }
@@ -746,7 +747,7 @@ function renderFilter(){
   keys.forEach(k => {
     const active = activeTypes.has(k);
     const b = document.createElement('button'); b.className='fchip'+(active?' on':'');
-    b.innerHTML = TYPES[k].label + ' <b>' + totals[k] + '</b> min';
+    b.innerHTML = TYPES[k].label + ' <span class="fsep">|</span> <b>' + totals[k] + '</b> Min';
     if (active){ b.style.background = TYPES[k].tint; b.style.borderColor = TYPES[k].color; b.style.color = '#23303a'; }
     b.onclick = () => {
       if (activeTypes.size === keys.length) activeTypes = new Set([k]);

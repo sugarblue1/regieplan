@@ -71,6 +71,8 @@
   .iconbtn { width:28px; height:28px; display:flex; align-items:center; justify-content:center; border:1px solid #ded8cc; background:#f7f5f0; border-radius:6px; cursor:pointer; color:#b3bac1; padding:0; }
   .iconbtn.on { color:#23303a; background:#e6e2d9; border-color:#c7c0b2; }
   .rowbtns button { display:inline-flex; align-items:center; justify-content:center; }
+  .hastip { position: relative; }
+  .hastip:hover::after { content: attr(data-tip); position:absolute; bottom:calc(100% + 6px); left:50%; transform:translateX(-50%); background:#23303a; color:#fff; font-size:11px; font-weight:600; white-space:nowrap; padding:4px 8px; border-radius:6px; z-index:30; pointer-events:none; box-shadow:0 2px 6px rgba(0,0,0,.25); }
 
   select.type, input.name, textarea.name, textarea.video, input.min { padding: 7px 8px; border: 1px solid #d6cfc2; border-radius: 7px; font-size: 14px; background: #faf9f6; width: 100%; }
   input.min { width: 62px; text-align: center; }
@@ -496,8 +498,8 @@ function renderRows(){
     tEnd.onchange = () => { const v = parseTimeInput(tEnd.value); it.fixEnd = v || undefined; syncMin(it); save(); renderRows(); renderStatus(); renderTot(); };
     sub.appendChild(tEnd); block.appendChild(sub);
     tdT.appendChild(block);
-    const lockBtn = document.createElement('button'); lockBtn.className = 'lockbtn' + (hasFix ? ' on' : ''); lockBtn.innerHTML = hasFix ? LOCK_CLOSED : LOCK_OPEN;
-    lockBtn.title = hasFix ? 'Feste Zeiten lösen' : 'Startzeit festmachen';
+    const lockBtn = document.createElement('button'); lockBtn.className = 'lockbtn hastip' + (hasFix ? ' on' : ''); lockBtn.innerHTML = hasFix ? LOCK_CLOSED : LOCK_OPEN;
+    lockBtn.dataset.tip = hasFix ? 'Feste Zeiten lösen' : 'Startzeit festmachen';
     lockBtn.onclick = () => { if (hasFix){ it.fixStart = undefined; it.fixEnd = undefined; } else { it.fixStart = fmt(r.startM); } syncMin(it); save(); renderRows(); renderStatus(); renderTot(); };
     tdT.appendChild(lockBtn);
     tr.appendChild(tdT);
@@ -507,15 +509,15 @@ function renderRows(){
     sel.onchange = () => { it.type = sel.value; if (it.type==='moderation'){ it.people = null; if(!Array.isArray(it.icons)) it.icons=[]; if(!it.icons.includes('micro')) it.icons.push('micro'); } save(); renderRows(); }; tdType.appendChild(sel); tr.appendChild(tdType);
     const tdS = document.createElement('td'); const stage = document.createElement('div'); stage.className='stage';
     if (it.type !== 'moderation'){
+      const pw = document.createElement('span'); pw.className='hastip'; pw.dataset.tip='Anzahl der Leute auf der Bühne';
       const ppl = document.createElement('input'); ppl.className='people'; ppl.type='number'; ppl.min='0'; ppl.placeholder='Pers.'; ppl.value = (it.people!=null ? it.people : '');
-      ppl.title = 'Anzahl der Leute auf der Bühne';
       ppl.oninput = () => { it.people = (ppl.value===''? null : (Number(ppl.value)||0)); save(); };
-      stage.appendChild(ppl);
+      pw.appendChild(ppl); stage.appendChild(pw);
     }
     const iconRow = document.createElement('div'); iconRow.className='iconrow';
     for (const key in ICONS){
       const ib = document.createElement('button'); const on = Array.isArray(it.icons) && it.icons.includes(key);
-      ib.className = 'iconbtn' + (on ? ' on' : ''); ib.type='button'; ib.innerHTML = ICONS[key].svg; ib.title = ICONS[key].label;
+      ib.className = 'iconbtn hastip' + (on ? ' on' : ''); ib.type='button'; ib.innerHTML = ICONS[key].svg; ib.dataset.tip = ICONS[key].label;
       if (on){ ib.style.color = ty.color; ib.style.background = ty.tint; ib.style.borderColor = ty.color; }
       ib.onclick = () => { if (!Array.isArray(it.icons)) it.icons = []; const ix = it.icons.indexOf(key); if (ix>=0) it.icons.splice(ix,1); else it.icons.push(key); save(); renderRows(); };
       iconRow.appendChild(ib);
@@ -532,7 +534,7 @@ function renderRows(){
     const growV = () => { inV.style.height='auto'; inV.style.height=(inV.scrollHeight+2)+'px'; };
     inV.oninput = () => { it.video = inV.value; growV(); save(); }; tdV.appendChild(inV); tr.appendChild(tdV);
     const tdBt = document.createElement('td'); const wrap = document.createElement('div'); wrap.className='rowbtns';
-    const stretch = document.createElement('button'); stretch.className='stretchbtn'; stretch.type='button'; stretch.title='Länge bis zum nächsten Fixpunkt (oder Ende) strecken';
+    const stretch = document.createElement('button'); stretch.className='stretchbtn hastip'; stretch.type='button'; stretch.dataset.tip='Länge bis zum nächsten Fixpunkt strecken';
     stretch.innerHTML = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v16"/><path d="M8 8l4-4 4 4"/><path d="M8 16l4 4 4-4"/></svg>';
     stretch.onclick = () => fillToNext(idx);
     const del = btn('✕', () => { ev().items.splice(idx,1); save(); renderRows(); renderStatus(); renderTot(); }); del.className='del';

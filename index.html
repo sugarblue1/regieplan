@@ -69,6 +69,8 @@
   .gapclose { margin-left:8px; border:1px solid #e6c98a; background:#fff; color:#8a5a00; border-radius:6px; padding:2px 9px; font-size:11px; font-weight:700; cursor:pointer; }
   .overlaprow td { background:#fbe7e4; color:#a8331f; font-size:12px; font-weight:600; padding:5px 12px; border-bottom:1px solid #f0eee8; }
   .ovbtn { border-color:#e0a6a0; color:#a8331f; }
+  .ovarrow { margin-left:6px; border:1px solid #e0a6a0; background:#fff; color:#a8331f; border-radius:6px; padding:1px 9px; font-size:14px; font-weight:700; cursor:pointer; }
+  .ovarrow:hover { background:#fbe7e4; }
   .tablescroll { overflow-x: auto; }
   select.type { width: 150px; }
   .stage { display:flex; flex-direction:row; align-items:center; gap:8px; }
@@ -577,11 +579,18 @@ function renderRows(){
           }
         } else {
           const ov = -diff;
-          gtd.innerHTML = 'Überschneidung von <b>'+ov+' Min</b> – hier läuft etwas ineinander. ';
-          if (!prev.fixEnd){
-            const cb = document.createElement('button'); cb.className='gapclose ovbtn'; cb.type='button'; cb.textContent='Überschneidung auflösen';
-            cb.onclick = () => { prev.min = Math.max(0, (Number(prev.min)||0) - ov); save(); renderRows(); renderStatus(); renderTot(); };
-            gtd.appendChild(cb);
+          gtd.innerHTML = 'Überschneidung von <b>'+ov+' Min</b> – hier läuft etwas ineinander. Auflösen: ';
+          const canUp = !prev.fixEnd;
+          const canDown = !!(cur.fixEnd && !cur.fixStart);
+          if (canUp){
+            const up = document.createElement('button'); up.className='ovarrow hastip'; up.type='button'; up.textContent='↑'; up.dataset.tip='Nach oben auflösen: Punkt darüber kürzen';
+            up.onclick = () => { prev.min = Math.max(0, (Number(prev.min)||0) - ov); save(); renderRows(); renderStatus(); renderTot(); };
+            gtd.appendChild(up);
+          }
+          if (canDown){
+            const dn = document.createElement('button'); dn.className='ovarrow hastip'; dn.type='button'; dn.textContent='↓'; dn.dataset.tip='Nach unten auflösen: diesen Punkt kürzen';
+            dn.onclick = () => { cur.min = Math.max(0, (Number(cur.min)||0) - ov); save(); renderRows(); renderStatus(); renderTot(); };
+            gtd.appendChild(dn);
           }
         }
         gtr.appendChild(gtd); tb.appendChild(gtr);

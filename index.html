@@ -146,6 +146,7 @@
   #gate button { width: 100%; padding: 12px; font-size: 15px; font-weight: 700; border: none; border-radius: 8px; background: #0d7d8a; color: #fff; cursor: pointer; }
   #gate .err { color: #b4392a; font-size: 13px; min-height: 18px; margin-top: 8px; }
   #app { display: none; }
+  #app.readonly input:disabled, #app.readonly textarea:disabled, #app.readonly select:disabled { opacity: 1; -webkit-text-fill-color: currentColor; cursor: default; }
 
   #printarea { display: none; }
   @media print {
@@ -759,8 +760,10 @@ function setLogCollapsed(collapsed){
 }
 function applyReadonly(){
   const banner = document.getElementById('robanner');
-  if (canEdit){ if (banner) banner.style.display = 'none'; return; }
+  const app = document.getElementById('app');
+  if (canEdit){ if (banner) banner.style.display = 'none'; app.classList.remove('readonly'); return; }
   if (banner) banner.style.display = 'block';
+  app.classList.add('readonly');
   document.querySelectorAll('#app input, #app textarea, #app select').forEach(el => { el.disabled = true; });
   document.querySelectorAll('#app .lockbtn').forEach(b => { b.disabled = true; });
   document.querySelectorAll('#app .iconbtn').forEach(b => { b.disabled = true; });

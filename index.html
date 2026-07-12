@@ -181,7 +181,7 @@
   <header class="top">
     <span class="logout" onclick="doLogout()">Abmelden</span>
     <span class="logout" id="whoami" onclick="changeName()" style="margin-right:16px"></span>
-    <h1>Regieplan</h1>
+    <h1 onclick="adminUnlock()" style="cursor:pointer" title="Admin">Regieplan</h1>
     <p>Gemeinsamer Plan. Was du änderst, sehen alle anderen sofort.</p>
   </header>
 
@@ -254,6 +254,7 @@ const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 const SHARED_EMAIL = 'team@csd-berlin.de';
 const VIEWER_EMAIL = 'gast@csd-berlin.de';
 let canEdit = true;
+const ADMIN_HASH = '9712b02f20260d8bb61478a2d7e349c0c72da715a9eb17c8f7909a587687952d';
 const supa = window.supabase.createClient(SUPA_URL, SUPA_KEY);
 const myClient = 'c' + Math.random().toString(36).slice(2);
 let myName = localStorage.getItem('regieplan_name') || '';
@@ -740,7 +741,14 @@ function renderLog(){
     box.appendChild(row);
   }
 }
-function isAdmin(){ return /monique/i.test(myName || ''); }
+function isAdmin(){ return localStorage.getItem('regieplan_admin') === '1'; }
+async function checkAdminCode(input){ const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input)); const hex = [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join(''); return hex === ADMIN_HASH; }
+async function adminUnlock(){
+  if (localStorage.getItem('regieplan_admin') === '1'){ if (confirm('Admin-Modus verlassen? Dann kannst du die Liste nicht mehr leeren.')){ localStorage.removeItem('regieplan_admin'); renderLog(); } return; }
+  const code = prompt('Admin-Code eingeben:'); if (code == null) return;
+  if (await checkAdminCode(code.trim())){ localStorage.setItem('regieplan_admin','1'); renderLog(); alert('Admin freigeschaltet. Du siehst jetzt den Knopf „Liste leeren".'); }
+  else alert('Falscher Code.');
+}
 function clearLog(){ if (!isAdmin()) return; if (!confirm('Die Änderungsliste komplett leeren?\n\nNur die Liste wird gelöscht, der Plan selbst bleibt unverändert.')) return; state.log = []; renderLog(); save(); }
 function setLogCollapsed(collapsed){
   const box = document.getElementById('logbox'), ar = document.getElementById('logarrow');

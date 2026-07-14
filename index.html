@@ -20,7 +20,7 @@
   header.top .live { font-size: 12px; color: #8fe3c0; margin-top: 6px; }
   header.top .logout { float: right; font-size: 12px; color: #b9c4cc; cursor: pointer; text-decoration: underline; }
 
-  .wrap { max-width: 1500px; margin: 0 auto; padding: 20px; }
+  .wrap { max-width: 1700px; margin: 0 auto; padding: 20px; }
 
   .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
   .tabs button { flex: 1; padding: 12px; font-size: 15px; font-weight: 700; border: none; border-radius: 10px; cursor: pointer; background: #e2ddd2; color: #5b6670; }
@@ -95,6 +95,7 @@
   input.min { width: 62px; text-align: center; }
   .name { width: 100%; min-width: 340px; }
   .video { width: 175px; min-width: 175px; }
+  .bb { width: 175px; min-width: 175px; }
   textarea.name, textarea.video { resize: vertical; line-height: 1.4; min-height: 36px; font-family: inherit; overflow: hidden; }
 
   .badge { width: 11px; height: 34px; border-radius: 4px; display: inline-block; }
@@ -208,7 +209,7 @@
       <div id="filterbar" class="filterbar"></div>
       <div class="tablescroll">
       <table class="plan">
-        <thead><tr><th class="hcol"></th><th>Uhrzeit</th><th>Art</th><th title="Anzahl der Leute auf der Bühne und passende Symbole">Bühne</th><th>Programmpunkt</th><th>Minuten</th><th></th><th>Video</th><th>Infos</th></tr></thead>
+        <thead><tr><th class="hcol"></th><th>Uhrzeit</th><th>Art</th><th title="Anzahl der Leute auf der Bühne und passende Symbole">Bühne</th><th>Programmpunkt</th><th>Minuten</th><th></th><th>Video</th><th>Infos</th><th title="Text, der unten im Bild eingeblendet wird">Bauchbinde</th></tr></thead>
         <tbody id="rows"></tbody>
       </table>
       </div>
@@ -369,6 +370,7 @@ function diffStates(o, n){
       else if ((old.name||'') !== (it.name||'')) out.push(label + ': Name → „' + (it.name||'') + '“');
       if (old.type !== it.type) out.push(label + ': „' + nm + '“ Art geändert');
       if ((old.video||'') !== (it.video||'')) out.push(label + ': „' + nm + '“ Video geändert');
+      if ((old.bauchbinde||'') !== (it.bauchbinde||'')) out.push(label + ': „' + nm + '“ Bauchbinde geändert');
       if ((old.fixStart||'') !== (it.fixStart||'')) out.push(label + ': „' + nm + '“ Startzeit ' + (it.fixStart ? ('fest ' + it.fixStart) : 'gelöst'));
       if ((old.fixEnd||'') !== (it.fixEnd||'')) out.push(label + ': „' + nm + '“ Endzeit ' + (it.fixEnd ? ('fest ' + it.fixEnd) : 'gelöst'));
     }
@@ -594,6 +596,9 @@ function renderRows(){
     const tdI = document.createElement('td'); const inI = document.createElement('textarea'); inI.className='video'; inI.rows=1; inI.value=it.info||''; inI.placeholder='Sonstige Informationen';
     const growI = () => { inI.style.height='auto'; inI.style.height=(inI.scrollHeight+2)+'px'; };
     inI.oninput = () => { it.info = inI.value; growI(); save(); }; tdI.appendChild(inI); tr.appendChild(tdI);
+    const tdBB = document.createElement('td'); const inBB = document.createElement('textarea'); inBB.className='video bb'; inBB.rows=1; inBB.value=it.bauchbinde||''; inBB.placeholder='Text für die Bauchbinde';
+    const growBB = () => { inBB.style.height='auto'; inBB.style.height=(inBB.scrollHeight+2)+'px'; };
+    inBB.oninput = () => { it.bauchbinde = inBB.value; growBB(); save(); }; tdBB.appendChild(inBB); tr.appendChild(tdBB);
     tr.addEventListener('dragstart', () => { dragFrom = idx; tr.classList.add('dragging'); });
     tr.addEventListener('dragend', () => tr.classList.remove('dragging'));
     tr.addEventListener('dragover', e => e.preventDefault());
@@ -603,7 +608,7 @@ function renderRows(){
       if (diff !== 0){
         const cur = ev().items[idx]; const prev = ev().items[idx-1];
         const gtr = document.createElement('tr'); gtr.className = diff>0 ? 'gaprow' : 'overlaprow';
-        const gtd = document.createElement('td'); gtd.colSpan = 9;
+        const gtd = document.createElement('td'); gtd.colSpan = 10;
         if (diff > 0){
           gtd.innerHTML = 'Lücke von <b>'+diff+' Min</b> – hier ist noch Luft. ';
           const canCur = !!(cur.fixEnd && !cur.fixStart);
@@ -632,7 +637,7 @@ function renderRows(){
       }
     }
     tb.appendChild(tr);
-    grow(); growV(); growI();
+    grow(); growV(); growI(); growBB();
   });
   window.scrollTo(0, sy);
   renderFilter();
@@ -699,8 +704,8 @@ document.getElementById('earliest').onchange = e => { const v = parseTimeInput(e
 /* ====== Export ====== */
 function planTable(){
   const c = computed(); const e = ev();
-  const head = ['Uhrzeit','Bis','Art','Bühne','Programmpunkt','Minuten','Video','Infos'];
-  const lines = c.rows.map(r => { const st = ((r.it.people!=null?r.it.people+' Pers':'') + (Array.isArray(r.it.icons)&&r.it.icons.length?' '+r.it.icons.map(k=>(ICONS[k]?ICONS[k].label:k)).join('/'):'')).trim(); return [ fmt(r.startM), fmt(r.endM), (TYPES[r.it.type]||TYPES.kuenstler).label, st, r.it.name||'', String(r.it.min), r.it.video||'', r.it.info||'' ]; });
+  const head = ['Uhrzeit','Bis','Art','Bühne','Programmpunkt','Minuten','Video','Infos','Bauchbinde'];
+  const lines = c.rows.map(r => { const st = ((r.it.people!=null?r.it.people+' Pers':'') + (Array.isArray(r.it.icons)&&r.it.icons.length?' '+r.it.icons.map(k=>(ICONS[k]?ICONS[k].label:k)).join('/'):'')).trim(); return [ fmt(r.startM), fmt(r.endM), (TYPES[r.it.type]||TYPES.kuenstler).label, st, r.it.name||'', String(r.it.min), r.it.video||'', r.it.info||'', r.it.bauchbinde||'' ]; });
   return { head, lines, title: e.title, start: fmt(c.firstStart), end: fmt(c.lastEnd) };
 }
 function copyForSheets(){
